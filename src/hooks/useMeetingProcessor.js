@@ -27,7 +27,7 @@ export function useMeetingProcessor(segments, isRecording, intervalMs = 20_000) 
       const next = await processTranscript(
         latest.current.segments.slice(current.cursor, end),
         current.state,
-        { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(55_000)]) },
+        { signal: controller.signal },
       );
       if (meeting.current !== current) return;
       current.cursor = end;
