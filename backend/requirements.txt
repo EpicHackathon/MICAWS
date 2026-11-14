@@ -1,1 +1,4 @@
 whisperx
+fastapi
+uvicorn
+python-multipart
