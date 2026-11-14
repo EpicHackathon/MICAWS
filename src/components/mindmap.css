@@ -1,60 +1,116 @@
 /* =========================================================
-   MIND MAP STYLES: "Cottage warmth" sepia palette
-   Only affects the mind map (everything inside .mindmap).
+   MIND MAP STYLES
+   - Shapes + behavior (squared-off main idea, rounded main points,
+     A2 detail pills, red unread dot) are the SAME in every theme.
+   - Colors follow the page theme (Marena's styles.css sets
+     data-theme on <body>: neutral / warm / cool).
+   - WARM theme = our "Cottage warmth" sepia palette.
+   - NEUTRAL + COOL use Marena's theme variables for now
+     (team will pick mind map colors for those later).
    ========================================================= */
 
+/* ---- Colors: NEUTRAL + COOL (from Marena's theme variables) ---- */
 .mindmap {
-  /* Palette: change a color here and it changes everywhere in the map */
-  --linen: #FFF8F0;       /* map background */
-  --parchment: #F5EBE0;   /* main point fill, switcher */
-  --oat: #EDE0D4;         /* detail fill, map border */
-  --biscuit: #E6D5C3;     /* background dots, hover */
-  --clay: #D4A373;        /* main idea fill */
-  --espresso: #4A3728;    /* headings, strongest borders */
-  --walnut: #6B5744;      /* body text */
-  --driftwood: #8B7355;   /* main point borders */
-  --sandstone: #A89279;   /* lines between boxes */
-  --brick: #B4533C;       /* unread dot (deep warm red, from the dusty rose family) */
+  --map-bg: var(--color-bg-card, #ffffff);
+  --map-dots: var(--color-border, #e5e0d8);
+  --map-line: var(--color-border, #c9c2b8);
+  --main-fill: var(--color-bg-card, #ffffff);
+  --main-border: var(--node-main-border, #4a3e32);
+  --point-fill: var(--color-bg-card, #ffffff);
+  --point-hover-fill: var(--color-bg-card, #ffffff);
+  --point-border: var(--node-point-border, #7a6f64);
+  --hover-border: var(--color-accent, #d4a373);
+  --detail-fill: var(--node-detail-bg, #efeae4);
+  --detail-border: var(--node-detail-border, #c7b28a);
+  --title: var(--node-title, #4a3e32);
+  --text: var(--node-text, #5c4f43);
+  --summary: var(--node-summary, #7a6f64);
+  --switch-bg: var(--color-bg-muted, #efeae4);
+  --switch-active: var(--color-bg-card, #ffffff);
+  --switch-text: var(--color-text-muted, #7a6f64);
+  --switch-text-active: var(--color-text, #4a3e32);
+  --unread: #B4533C;   /* brick red unread dot, same in every theme */
+}
 
-  background: var(--linen);
-  color: var(--espresso);
+/* ---- Colors: WARM = "Cottage warmth" sepia palette ---- */
+[data-theme="warm"] .mindmap {
+  --map-bg: #FFF8F0;          /* Linen */
+  --map-dots: #E6D5C3;        /* Biscuit */
+  --map-line: #A89279;        /* Sandstone */
+  --main-fill: #D4A373;       /* Clay */
+  --main-border: #4A3728;     /* Espresso */
+  --point-fill: #F5EBE0;      /* Parchment */
+  --point-hover-fill: #E6D5C3;/* Biscuit */
+  --point-border: #8B7355;    /* Driftwood */
+  --hover-border: #8B7355;    /* Driftwood */
+  --detail-fill: #EDE0D4;     /* Oat */
+  --detail-border: #A89279;   /* Sandstone */
+  --title: #4A3728;           /* Espresso */
+  --text: #4A3728;            /* Espresso */
+  --summary: #6B5744;         /* Walnut */
+  --switch-bg: #EDE0D4;       /* Oat */
+  --switch-active: #FFF8F0;   /* Linen */
+  --switch-text: #6B5744;     /* Walnut */
+  --switch-text-active: #4A3728;
+}
+
+/* ---- Map container (Marena's frame + shadow) ---- */
+.mindmap {
+  height: 100%;
+  min-height: 400px;
+  border: 1px solid var(--color-border, #e5e0d8);
+  border-radius: 12px;
+  background: var(--map-bg);
+  color: var(--title);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm, none);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --xy-background-pattern-color: var(--map-dots);   /* React Flow's background dots */
+}
+.mindmap-frame {
+  height: 450px;
+  margin-top: 12px;
 }
 
 /* Lines between boxes */
 .mindmap .react-flow__edge-path {
-  stroke: var(--sandstone);
+  stroke: var(--map-line);
   stroke-width: 1.6;
 }
 
-/* The three shapes. Each box gets ONE of these class names. */
+/* ---- The three shapes. Each box gets ONE of these class names. ---- */
 
 /* MAIN IDEA: squared-off rectangle, thickest border, biggest */
 .mindmap .react-flow__node.shape-main {
   width: 240px;
   border-radius: 4px;
-  border: 2.5px solid var(--espresso);
-  background: var(--clay);
-  color: var(--espresso);
+  border: 2.5px solid var(--main-border);
+  background: var(--main-fill);
+  color: var(--title);
   font-size: 18px;
   font-weight: 700;
   padding: 16px;
+  box-shadow: var(--shadow-sm, none);
 }
 
 /* MAIN POINT: rounded rectangle, medium border */
 .mindmap .react-flow__node.shape-point {
   width: 170px;
   border-radius: 14px;
-  border: 1.5px solid var(--driftwood);
-  background: var(--parchment);
-  color: var(--espresso);
+  border: 1.5px solid var(--point-border);
+  background: var(--point-fill);
+  color: var(--title);
   font-size: 14px;
   font-weight: 600;
   padding: 12px;
   cursor: pointer;
+  box-shadow: var(--shadow-sm, none);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 .mindmap .react-flow__node.shape-point:hover {
-  background: var(--biscuit);
+  background: var(--point-hover-fill);
+  border-color: var(--hover-border);
+  box-shadow: var(--shadow-md, none);
 }
 
 /* MAIN POINT, ZOOMED IN: bigger, label + summary inside (like the sketch) */
@@ -63,40 +119,45 @@
   text-align: left;
   padding: 14px 18px;
   cursor: default;
+  border-color: var(--hover-border);
+  box-shadow: var(--shadow-md, none);
 }
 .mindmap .react-flow__node.shape-point.is-focus:hover {
-  background: var(--parchment);
+  background: var(--point-fill);
 }
 .node-title {
   font-size: 17px;
   font-weight: 700;
+  color: var(--title);
 }
 .node-summary {
   margin-top: 6px;
   font-size: 13px;
   font-weight: 400;
-  color: var(--walnut);
+  color: var(--summary);
   line-height: 1.4;
 }
 
-/* DETAIL: pill, thin border, light fill, smallest */
+/* DETAIL (A2): pill with title + 2-line summary, thin border, light fill */
 .mindmap .react-flow__node.shape-detail {
   width: 196px;
   border-radius: 999px;
-  border: 1px solid var(--sandstone);
-  background: var(--oat);
-  color: var(--espresso);
+  border: 1px solid var(--detail-border);
+  background: var(--detail-fill);
+  color: var(--text);
   font-size: 12px;
   padding: 10px 26px;          /* extra side padding keeps text inside the round ends */
+  box-shadow: var(--shadow-sm, none);
 }
 .detail-title {
   font-size: 13px;
   font-weight: 600;
+  color: var(--title);
 }
 .detail-summary {
   margin-top: 2px;
   font-size: 11.5px;
-  color: var(--walnut);
+  color: var(--summary);
   line-height: 1.35;
   /* cut off after 2 lines with "..." so pills never get tall */
   display: -webkit-box;
@@ -105,8 +166,7 @@
   overflow: hidden;
 }
 
-/* UNREAD DOT: a topic got new info and nobody has looked yet.
-   Sits on the top-right corner and pulses twice when it first appears. */
+/* ---- UNREAD DOT: topic got new info nobody has looked at yet ---- */
 .mindmap .react-flow__node.has-unread::after {
   content: "";
   position: absolute;
@@ -115,24 +175,26 @@
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: var(--brick);
-  box-shadow: 0 0 0 2px var(--linen);   /* thin cream ring so it stands off the box */
+  background: var(--unread);
+  box-shadow: 0 0 0 2px var(--map-bg);   /* thin ring so it stands off the box */
   animation: unread-pulse 1s ease-out 2;
 }
 @keyframes unread-pulse {
-  0%   { box-shadow: 0 0 0 2px var(--linen), 0 0 0 2px rgba(180, 83, 60, 0.6); }
-  100% { box-shadow: 0 0 0 2px var(--linen), 0 0 0 12px rgba(180, 83, 60, 0); }
+  0%   { box-shadow: 0 0 0 2px var(--map-bg), 0 0 0 2px rgba(180, 83, 60, 0.6); }
+  100% { box-shadow: 0 0 0 2px var(--map-bg), 0 0 0 12px rgba(180, 83, 60, 0); }
 }
 @media (prefers-reduced-motion: reduce) {
   .mindmap .react-flow__node.has-unread::after { animation: none; }
+  .mindmap .react-flow__node.shape-point { transition: none; }
 }
 
-/* STYLE SWITCHER (Tree / Linear / Bubble) */
+/* ---- Style switcher (Tree / Linear / Bubble) ---- */
 .style-switch {
   display: inline-flex;
   gap: 2px;
   padding: 3px;
-  background: var(--oat);
+  background: var(--switch-bg);
+  border: 1px solid var(--color-border, transparent);
   border-radius: 10px;
 }
 .style-switch button {
@@ -140,22 +202,25 @@
   background: transparent;
   padding: 6px 12px;
   border-radius: 8px;
-  font: 500 13px system-ui, sans-serif;
-  color: var(--walnut);
+  font: 500 13px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--switch-text);
   cursor: pointer;
 }
+.style-switch button:hover {
+  background: var(--color-btn-ghost-hover, transparent);
+  color: var(--switch-text-active);
+}
 .style-switch button[aria-pressed="true"] {
-  background: var(--linen);
-  color: var(--espresso);
-  box-shadow: 0 1px 2px rgba(74, 55, 40, 0.18);
+  background: var(--switch-active);
+  color: var(--switch-text-active);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.15));
 }
 
-/* Hide React Flow's connection dots on the box edges (not in our design). */
+/* ---- Connection dots: hidden (not in our design) ---- */
 .mindmap .react-flow__handle {
   opacity: 0;
 }
-
-/* BUBBLE: move the connection dots to the center of each box (and hide them),
+/* BUBBLE: move the hidden dots to the center of each box,
    so the straight lines look like spokes coming out of the middle. */
 .mindmap-bubble .react-flow__handle {
   top: 50%;
@@ -163,5 +228,4 @@
   bottom: auto;
   right: auto;
   transform: translate(-50%, -50%);
-  opacity: 0;
 }

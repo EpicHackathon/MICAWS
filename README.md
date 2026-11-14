@@ -152,3 +152,19 @@ With MEETING_MOCK=true, arbitrary text appears verbatim as a quoted mock topic. 
 The voice recording controls are an existing prototype and were excluded from this revision. Test this revision using the sample buttons and typed text.
 
 The automated UI test uses jsdom to exercise typed submission, a failed request and retry, view switching, details navigation, and reset confirmation. React Flow can emit layout/style warnings in this simulated environment because it does not calculate browser layout. Check the visual map in a browser when reviewing styling changes.
+
+## Run with Docker Compose
+
+Install Docker Desktop with WSL 2 support, start it, then open a terminal in MICAWS. Ensure .env.local exists (copy .env.example if needed). Choose MEETING_MOCK=true for the sample demo or configure the Gemini key for live processing.
+
+Run:
+
+```powershell
+docker compose up --build -d
+docker compose ps -a
+docker compose logs --tail=50
+```
+
+Open http://localhost:5173. The frontend remains running. The diart service only verifies its import, prints "diart ready", and exits; it does not start an audio API.
+
+Stop the project with `docker compose down`. Local environment files are excluded from image builds, and Compose loads .env.local into the frontend container at runtime. Recreate the frontend after changing environment settings with `docker compose up -d --force-recreate frontend`.

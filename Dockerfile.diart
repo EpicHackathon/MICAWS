@@ -1,0 +1,48 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# System dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    ffmpeg \
+    libsndfile1 \
+    libportaudio2 && \
+    rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip
+RUN python -m pip install --no-cache-dir --upgrade pip
+
+# Pin CPU-only PyTorch versions
+RUN printf '%s\n' \
+    'torch==2.5.1+cpu' \
+    'torchaudio==2.5.1+cpu' \
+    'torchvision==0.20.1+cpu' \
+    > /tmp/torch-constraints.txt
+
+# Install CPU-only PyTorch
+RUN python -m pip install --no-cache-dir \
+    torch==2.5.1+cpu \
+    torchaudio==2.5.1+cpu \
+    torchvision==0.20.1+cpu \
+    --extra-index-url https://download.pytorch.org/whl/cpu
+
+# Install diart without upgrading PyTorch
+RUN python -m pip install --no-cache-dir \
+    -c /tmp/torch-constraints.txt \
+    --extra-index-url https://download.pytorch.org/whl/cpu \
+    diart==0.9.2 \
+    numpy==1.26.4 \
+    huggingface_hub==0.25.2
+
+# Install the SpeechBrain version used in WSL
+RUN python -m pip install --no-cache-dir --no-deps \
+    speechbrain==1.0.3
+
+# Copy MICAWS diarization code
+COPY backend/diart/ /app/diart_service/
+
+# Verify imports during the build
+RUN python -c "import torch, torchaudio, diart; print('diart import successful')"
+
+CMD ["python", "-c", "import diart; print('diart Docker environment ready!')"]

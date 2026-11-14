@@ -159,7 +159,7 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
   return (
     <div
       className={`mindmap mindmap-${mapStyle}`}
-      style={{ height: '100%', minHeight: 400, border: '1px solid #EDE0D4', borderRadius: 8 }}
+      /* size, border and colors come from mindmap.css (theme-aware) */
     >
       <ReactFlow
         key={mapStyle + '|' + nodes.map(node => node.id).join('|')}
@@ -189,7 +189,7 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
             ))}
           </div>
         </Panel>
-        <Background color="#E6D5C3" />
+        <Background />
         <Controls showInteractive={false} />
       </ReactFlow>
     </div>
