@@ -4,8 +4,8 @@ import '@xyflow/react/dist/style.css';
 import './mindmap.css';
 
 // Box sizes, matching mindmap.css. (Zoomed-in main point is 280 wide.)
-const BOX_WIDTH = { main: 240, point: 170, detail: 170 };
-const BOX_HEIGHT = { main: 56, point: 44, detail: 34 };   // close enough for centering
+const BOX_WIDTH = { main: 240, point: 170, detail: 196 };
+const BOX_HEIGHT = { main: 56, point: 44, detail: 58 };   // close enough for centering
 
 // Which level is this box? Look at its parent.
 function getLevel(node, mainIdea) {
@@ -79,7 +79,10 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
     // Zoomed-in main point shows its summary under the title. Everything else: just the label.
     const label = isFocus
       ? <><div className="node-title">{node.label}</div><div className="node-summary">{node.summary}</div></>
-      : node.label;
+      : level === 'detail'
+        // A2 "peek line": detail pill shows its title + one short line from its summary
+        ? <><div className="detail-title">{node.label}</div><div className="detail-summary">{node.summary}</div></>
+        : node.label;
 
     // React Flow pins a box by its TOP-LEFT corner.
     // Shift by half the width (and height) so the box's CENTER lands on its spot.

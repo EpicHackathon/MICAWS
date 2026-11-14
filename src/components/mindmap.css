@@ -86,10 +86,25 @@
 
 /* DETAIL: pill, thin border, light fill, smallest */
 .react-flow__node.shape-detail {
-  width: 170px;
+  width: 196px;
   border-radius: 999px;
   border: 1px solid #a9afba;
   background: #eceef2;
   font-size: 12px;
-  padding: 8px 12px;
+  padding: 10px 26px;          /* extra side padding keeps text inside the round ends */
+}
+.detail-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+.detail-summary {
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: #646b78;
+  line-height: 1.35;
+  /* cut off after 2 lines with "..." so pills never get tall */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
