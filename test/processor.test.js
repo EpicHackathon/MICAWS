@@ -82,7 +82,8 @@ test('caller keeps the last valid state on failure and can retry the same batch'
 
 test('mock replay preserves the latest summary and unrelated meeting content', async () => {
   const previous = structuredClone(demoStates[2]);
-  previous.nodes.push({ id: 'budget', label: 'Budget', summary: 'Budget agreed.', importance: 4 });
+  previous.nodes.push({ id: 'budget', label: 'Budget', summary: 'Budget agreed.', importance: 4, parentId: 'launch' });
+  previous.edges.push({ id: 'launch-budget', source: 'launch', target: 'budget' });
   previous.actionItems.push({ id: 'budget-task', text: 'Alex will check the budget.' });
   const response = await send(mock, demoBatches[0], previous);
   assert.equal(response.status, 200);
@@ -112,4 +113,75 @@ test('invalid JSON request returns 400 and self-loops are rejected', async () =>
   assert.equal(response.status, 400);
   const state = { ...demoStates[0], edges: [{ id: 'loop', source: 'launch', target: 'launch' }] };
   assert.equal(meetingSchema.safeParse(state).success, false);
+});
+
+const detailState = () => {
+  const state = structuredClone(demoStates[1]);
+  state.nodes.push({ id: 'campaign-detail', label: 'Campaign Owner', summary: 'Sam will draft the campaign.', importance: 3, parentId: 'marketing' });
+  state.edges.push({ id: 'marketing-campaign-detail', source: 'marketing', target: 'campaign-detail' });
+  return state;
+};
+
+test('hierarchy accepts empty, root-only and three-level states', () => {
+  for (const state of [emptyMeetingState, ...demoStates, detailState()]) {
+    assert.equal(meetingSchema.safeParse(state).success, true);
+  }
+});
+
+test('hierarchy rejects roots, orphans, cycles, deep nesting and incorrect importance', () => {
+  const changes = [
+    state => { state.nodes[1].parentId = null; },
+    state => { state.nodes[1].parentId = 'missing'; },
+    state => { state.nodes[1].parentId = 'campaign-detail'; },
+    state => { state.nodes[1].parentId = 'marketing'; },
+    state => { state.nodes[0].importance = 4; },
+    state => { state.nodes[1].importance = 5; },
+    state => { delete state.nodes[1].parentId; },
+    state => {
+      state.nodes.push({ id: 'deep', label: 'Deep', summary: 'Too deep.', importance: 2, parentId: 'campaign-detail' });
+      state.edges.push({ id: 'campaign-detail-deep', source: 'campaign-detail', target: 'deep' });
+    },
+  ];
+  for (const change of changes) {
+    const state = detailState();
+    change(state);
+    assert.equal(meetingSchema.safeParse(state).success, false);
+  }
+});
+
+test('edges must exactly represent the tree with canonical IDs', () => {
+  const changes = [
+    state => { state.edges.pop(); },
+    state => { state.edges[0].id = 'wrong'; },
+    state => { state.edges[0].source = 'marketing'; state.edges[0].target = 'launch'; },
+    state => { state.edges.push({ id: 'extra', source: 'launch', target: 'marketing' }); },
+    state => { state.edges.push({ id: 'launch-launch', source: 'launch', target: 'launch' }); },
+  ];
+  for (const change of changes) {
+    const state = detailState();
+    change(state);
+    assert.equal(meetingSchema.safeParse(state).success, false);
+  }
+});
+
+test('mock preserves every parent between updates', async () => {
+  const previous = demoStates[1];
+  const response = await send(mock, demoBatches[2], previous);
+  assert.equal(response.status, 200);
+  const next = await response.json();
+  for (const node of previous.nodes) {
+    assert.equal(next.nodes.find(updated => updated.id === node.id).parentId, node.parentId);
+  }
+});
+
+test('server rejects a valid tree that changes an existing parent', async () => {
+  const previous = detailState();
+  const next = structuredClone(previous);
+  next.nodes[2].parentId = 'launch';
+  next.edges[1] = { id: 'launch-campaign-detail', source: 'launch', target: 'campaign-detail' };
+  assert.equal(meetingSchema.safeParse(next).success, true);
+  const handler = createHandler({
+    env: { GEMINI_API_KEY: 'test-only' }, generateText: async () => JSON.stringify(next),
+  });
+  assert.equal((await send(handler, demoBatches[2], previous)).status, 502);
 });
