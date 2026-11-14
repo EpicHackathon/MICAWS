@@ -1,37 +1,71 @@
-/* The map uses its own clean font, whatever font the rest of the page uses. */
+/* =========================================================
+   MIND MAP STYLES: "Cottage warmth" sepia palette
+   Only affects the mind map (everything inside .mindmap).
+   ========================================================= */
+
 .mindmap {
+  /* Palette: change a color here and it changes everywhere in the map */
+  --linen: #FFF8F0;       /* map background */
+  --parchment: #F5EBE0;   /* main point fill, switcher */
+  --oat: #EDE0D4;         /* detail fill, map border */
+  --biscuit: #E6D5C3;     /* background dots, hover */
+  --clay: #D4A373;        /* main idea fill */
+  --espresso: #4A3728;    /* headings, strongest borders */
+  --walnut: #6B5744;      /* body text */
+  --driftwood: #8B7355;   /* main point borders */
+  --sandstone: #A89279;   /* lines between boxes */
+  --brick: #B4533C;       /* unread dot (deep warm red, from the dusty rose family) */
+
+  background: var(--linen);
+  color: var(--espresso);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Lines between boxes */
+.mindmap .react-flow__edge-path {
+  stroke: var(--sandstone);
+  stroke-width: 1.6;
 }
 
 /* The three shapes. Each box gets ONE of these class names. */
 
 /* MAIN IDEA: squared-off rectangle, thickest border, biggest */
-.react-flow__node.shape-main {
+.mindmap .react-flow__node.shape-main {
   width: 240px;
   border-radius: 4px;
-  border: 2.5px solid #16181d;
+  border: 2.5px solid var(--espresso);
+  background: var(--clay);
+  color: var(--espresso);
   font-size: 18px;
   font-weight: 700;
   padding: 16px;
 }
 
 /* MAIN POINT: rounded rectangle, medium border */
-.react-flow__node.shape-point {
+.mindmap .react-flow__node.shape-point {
   width: 170px;
   border-radius: 14px;
-  border: 1.5px solid #3a3f4a;
+  border: 1.5px solid var(--driftwood);
+  background: var(--parchment);
+  color: var(--espresso);
   font-size: 14px;
   font-weight: 600;
   padding: 12px;
   cursor: pointer;
 }
+.mindmap .react-flow__node.shape-point:hover {
+  background: var(--biscuit);
+}
 
 /* MAIN POINT, ZOOMED IN: bigger, label + summary inside (like the sketch) */
-.react-flow__node.shape-point.is-focus {
+.mindmap .react-flow__node.shape-point.is-focus {
   width: 280px;
   text-align: left;
   padding: 14px 18px;
   cursor: default;
+}
+.mindmap .react-flow__node.shape-point.is-focus:hover {
+  background: var(--parchment);
 }
 .node-title {
   font-size: 17px;
@@ -41,8 +75,56 @@
   margin-top: 6px;
   font-size: 13px;
   font-weight: 400;
-  color: #3a3f4a;
+  color: var(--walnut);
   line-height: 1.4;
+}
+
+/* DETAIL: pill, thin border, light fill, smallest */
+.mindmap .react-flow__node.shape-detail {
+  width: 196px;
+  border-radius: 999px;
+  border: 1px solid var(--sandstone);
+  background: var(--oat);
+  color: var(--espresso);
+  font-size: 12px;
+  padding: 10px 26px;          /* extra side padding keeps text inside the round ends */
+}
+.detail-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+.detail-summary {
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--walnut);
+  line-height: 1.35;
+  /* cut off after 2 lines with "..." so pills never get tall */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* UNREAD DOT: a topic got new info and nobody has looked yet.
+   Sits on the top-right corner and pulses twice when it first appears. */
+.mindmap .react-flow__node.has-unread::after {
+  content: "";
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--brick);
+  box-shadow: 0 0 0 2px var(--linen);   /* thin cream ring so it stands off the box */
+  animation: unread-pulse 1s ease-out 2;
+}
+@keyframes unread-pulse {
+  0%   { box-shadow: 0 0 0 2px var(--linen), 0 0 0 2px rgba(180, 83, 60, 0.6); }
+  100% { box-shadow: 0 0 0 2px var(--linen), 0 0 0 12px rgba(180, 83, 60, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mindmap .react-flow__node.has-unread::after { animation: none; }
 }
 
 /* STYLE SWITCHER (Tree / Linear / Bubble) */
@@ -50,7 +132,7 @@
   display: inline-flex;
   gap: 2px;
   padding: 3px;
-  background: #eceef2;
+  background: var(--oat);
   border-radius: 10px;
 }
 .style-switch button {
@@ -59,13 +141,13 @@
   padding: 6px 12px;
   border-radius: 8px;
   font: 500 13px system-ui, sans-serif;
-  color: #3a3f4a;
+  color: var(--walnut);
   cursor: pointer;
 }
 .style-switch button[aria-pressed="true"] {
-  background: #ffffff;
-  color: #16181d;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  background: var(--linen);
+  color: var(--espresso);
+  box-shadow: 0 1px 2px rgba(74, 55, 40, 0.18);
 }
 
 /* Hide React Flow's connection dots on the box edges (not in our design). */
@@ -82,29 +164,4 @@
   right: auto;
   transform: translate(-50%, -50%);
   opacity: 0;
-}
-
-/* DETAIL: pill, thin border, light fill, smallest */
-.react-flow__node.shape-detail {
-  width: 196px;
-  border-radius: 999px;
-  border: 1px solid #a9afba;
-  background: #eceef2;
-  font-size: 12px;
-  padding: 10px 26px;          /* extra side padding keeps text inside the round ends */
-}
-.detail-title {
-  font-size: 13px;
-  font-weight: 600;
-}
-.detail-summary {
-  margin-top: 2px;
-  font-size: 11.5px;
-  color: #646b78;
-  line-height: 1.35;
-  /* cut off after 2 lines with "..." so pills never get tall */
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }

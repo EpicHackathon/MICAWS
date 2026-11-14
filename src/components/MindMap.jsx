@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ReactFlow, Background, Controls, Panel } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './mindmap.css';
@@ -43,6 +43,28 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
   const [focusId, setFocusId] = useState(null);
   // mapStyle = 'tree', 'linear' or 'bubble'
   const [mapStyle, setMapStyle] = useState('tree');
+
+  // UNREAD DOTS: ids of topics that got new info nobody has looked at yet.
+  const [unread, setUnread] = useState(() => new Set());
+  const lastSeen = useRef(null);   // what each topic said last time: id -> "label|summary"
+  useEffect(() => {
+    const now = new Map(allNodes.map(node => [node.id, node.label + '|' + node.summary]));
+    const before = lastSeen.current;
+    // Skip the very first load (and loading into an empty map): nothing is "new" yet.
+    if (before && before.size > 0) {
+      const changed = allNodes.filter(node => before.get(node.id) !== now.get(node.id)).map(node => node.id);
+      if (changed.length) setUnread(current => new Set([...current, ...changed]));
+    }
+    lastSeen.current = now;
+  }, [allNodes]);
+
+  function markRead(ids) {
+    setUnread(current => {
+      const next = new Set(current);
+      ids.forEach(id => next.delete(id));
+      return next;
+    });
+  }
 
   const mainIdea = allNodes.find(node => node.parentId === null);
 
@@ -100,13 +122,19 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
         ? { x: center.x, y: center.y - height / 2 }                  // linear: keep each column's left edges lined up
         : { x: center.x - width / 2, y: center.y - height / 2 };     // bubble: center both ways
 
+    // Show a red dot if this topic is unread. In the big picture, a main point also gets
+    // a dot when one of its hidden details is unread ("click me, something changed in here").
+    const hiddenKidUnread = level === 'point' && !isFocus
+      && allNodes.some(kid => kid.parentId === node.id && unread.has(kid.id));
+    const hasUnread = unread.has(node.id) || hiddenKidUnread;
+
     return {
       id: node.id,
       position,
       data: { label },
-      className: `shape-${level}${isFocus ? ' is-focus' : ''}`,   // <- picks the shape
+      className: `shape-${level}${isFocus ? ' is-focus' : ''}${hasUnread ? ' has-unread' : ''}`,   // <- picks the shape
       selected: node.id === selectedNodeId,                         // Micah: highlight the box shown in the details panel
-      ariaLabel: node.label + ', importance ' + node.importance + ' out of 5. Select for details.',
+      ariaLabel: node.label + (hasUnread ? ', has new updates' : '') + ', importance ' + node.importance + ' out of 5. Select for details.',
       sourcePosition: sides.source,
       targetPosition: sides.target,
     };
@@ -118,17 +146,20 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
     // Team design: clicking a main point zooms in (summary shows inside the box).
     // Micah's details panel still opens from the topic list view.
     if (clicked.parentId === mainIdea?.id) setFocusId(clicked.id);
+    markRead([clicked.id]);   // you looked at it, so its dot goes away
   }
 
   // Click empty space -> back to the big picture.
+  // Leaving a zoomed-in point counts as having seen its details.
   function handlePaneClick() {
+    if (focusId) markRead(allNodes.filter(node => node.parentId === focusId).map(node => node.id));
     setFocusId(null);
   }
 
   return (
     <div
       className={`mindmap mindmap-${mapStyle}`}
-      style={{ height: '100%', minHeight: 400, border: '1px solid #ddd', borderRadius: 8 }}
+      style={{ height: '100%', minHeight: 400, border: '1px solid #EDE0D4', borderRadius: 8 }}
     >
       <ReactFlow
         key={mapStyle + '|' + nodes.map(node => node.id).join('|')}
@@ -158,7 +189,7 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
             ))}
           </div>
         </Panel>
-        <Background />
+        <Background color="#E6D5C3" />
         <Controls showInteractive={false} />
       </ReactFlow>
     </div>
