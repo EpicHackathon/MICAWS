@@ -112,8 +112,9 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
   // Click a main point -> zoom in on it.
   function handleNodeClick(event, node) {
     const clicked = allNodes.find(n => n.id === node.id);
-    onSelectNode?.(node.id);                                        // Micah: open the details panel
-    if (clicked.parentId === mainIdea?.id) setFocusId(clicked.id);   // zoom into main points
+    // Team design: clicking a main point zooms in (summary shows inside the box).
+    // Micah's details panel still opens from the topic list view.
+    if (clicked.parentId === mainIdea?.id) setFocusId(clicked.id);
   }
 
   // Click empty space -> back to the big picture.

@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import MindMap from './MindMap.jsx';
+import { mockMeeting } from '../shared/mockMeeting.js';
 
-export default function MeetingView({ state }) {
+export default function MeetingView({ state: liveState }) {
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [showMap, setShowMap] = useState(true);
+  // Dev helper: show the sample hackathon meeting instead of the live one.
+  const [showSample, setShowSample] = useState(false);
+  const state = showSample ? mockMeeting : liveState;
   const { nodes, edges, actionItems } = state;
   const selected = nodes.find(node => node.id === selectedNodeId);
   const parent = selected && nodes.find(node => node.id === selected.parentId);
@@ -15,6 +19,9 @@ export default function MeetingView({ state }) {
       <button type="button" onClick={() => setShowMap(current => !current)}
         aria-controls="topic-view">
         {showMap ? 'Show topic list' : 'Show mind map'}
+      </button>{' '}
+      <button type="button" onClick={() => { setShowSample(current => !current); setSelectedNodeId(null); }}>
+        {showSample ? 'Back to live meeting' : 'Load sample meeting'}
       </button>
       <div id="topic-view">
         {!nodes.length ? <p>No topics yet. Send a sample batch or enter test text below.</p> :
