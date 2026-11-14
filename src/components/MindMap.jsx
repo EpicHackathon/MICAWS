@@ -44,18 +44,33 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
   // mapStyle = 'tree', 'linear' or 'bubble'
   const [mapStyle, setMapStyle] = useState('tree');
 
-  // UNREAD DOTS: ids of topics that got new info nobody has looked at yet.
+  // UNREAD DOTS: ids of MAIN POINTS that got new info (live) nobody has looked at yet.
+  // Only main points (the rounded rectangles) ever get a dot.
   const [unread, setUnread] = useState(() => new Set());
-  const lastSeen = useRef(null);   // what each topic said last time: id -> "label|summary"
+  const lastSeen = useRef(null);       // what each topic said last time: id -> "label|summary"
+  const focusRef = useRef(focusId);    // which point you're looking at right now
+  focusRef.current = focusId;
   useEffect(() => {
     const now = new Map(allNodes.map(node => [node.id, node.label + '|' + node.summary]));
     const before = lastSeen.current;
-    // Skip the very first load (and loading into an empty map): nothing is "new" yet.
-    if (before && before.size > 0) {
-      const changed = allNodes.filter(node => before.get(node.id) !== now.get(node.id)).map(node => node.id);
-      if (changed.length) setUnread(current => new Set([...current, ...changed]));
-    }
     lastSeen.current = now;
+    if (!before) return;   // first time the map appears: nothing is "new" yet
+
+    // A completely different meeting (e.g. "Load sample meeting")? That's not live talk: no dots.
+    const sameMeeting = [...now.keys()].some(id => before.has(id));
+    if (!sameMeeting) { setUnread(new Set()); return; }
+
+    // Live update: find what changed, then point the dot at its MAIN POINT.
+    const main = allNodes.find(node => node.parentId === null);
+    const byId = new Map(allNodes.map(node => [node.id, node]));
+    const pointsToDot = new Set();
+    for (const node of allNodes) {
+      if (before.get(node.id) === now.get(node.id)) continue;      // unchanged
+      if (node.parentId === main?.id) pointsToDot.add(node.id);    // a main point changed
+      else if (byId.get(node.parentId)?.parentId === main?.id) pointsToDot.add(node.parentId); // one of its details changed
+    }
+    pointsToDot.delete(focusRef.current);   // you're already looking at that one
+    if (pointsToDot.size) setUnread(current => new Set([...current, ...pointsToDot]));
   }, [allNodes]);
 
   function markRead(ids) {
@@ -122,11 +137,8 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
         ? { x: center.x, y: center.y - height / 2 }                  // linear: keep each column's left edges lined up
         : { x: center.x - width / 2, y: center.y - height / 2 };     // bubble: center both ways
 
-    // Show a red dot if this topic is unread. In the big picture, a main point also gets
-    // a dot when one of its hidden details is unread ("click me, something changed in here").
-    const hiddenKidUnread = level === 'point' && !isFocus
-      && allNodes.some(kid => kid.parentId === node.id && unread.has(kid.id));
-    const hasUnread = unread.has(node.id) || hiddenKidUnread;
+    // Dot only on main points in the big picture (not while you're zoomed into it).
+    const hasUnread = level === 'point' && !isFocus && unread.has(node.id);
 
     return {
       id: node.id,
@@ -152,7 +164,7 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
   // Click empty space -> back to the big picture.
   // Leaving a zoomed-in point counts as having seen its details.
   function handlePaneClick() {
-    if (focusId) markRead(allNodes.filter(node => node.parentId === focusId).map(node => node.id));
+    if (focusId) markRead([focusId]);
     setFocusId(null);
   }
 

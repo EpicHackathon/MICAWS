@@ -2,38 +2,15 @@
    MIND MAP STYLES
    - Shapes + behavior (squared-off main idea, rounded main points,
      A2 detail pills, red unread dot) are the SAME in every theme.
-   - Colors follow the page theme (Marena's styles.css sets
-     data-theme on <body>: neutral / warm / cool).
-   - WARM theme = our "Cottage warmth" sepia palette.
-   - NEUTRAL + COOL use Marena's theme variables for now
-     (team will pick mind map colors for those later).
+   - Colors: our "Cottage warmth" sepia palette is the BASE (default)
+     for the map, in Neutral and Warm.
+   - COOL borrows Marena's cool theme variables for now
+     (team will pick mind map colors for Cool later).
    ========================================================= */
 
-/* ---- Colors: NEUTRAL + COOL (from Marena's theme variables) ---- */
+/* ---- Colors: BASE = "Cottage warmth" sepia palette ---- */
 .mindmap {
-  --map-bg: var(--color-bg-card, #ffffff);
-  --map-dots: var(--color-border, #e5e0d8);
-  --map-line: var(--color-border, #c9c2b8);
-  --main-fill: var(--color-bg-card, #ffffff);
-  --main-border: var(--node-main-border, #4a3e32);
-  --point-fill: var(--color-bg-card, #ffffff);
-  --point-hover-fill: var(--color-bg-card, #ffffff);
-  --point-border: var(--node-point-border, #7a6f64);
-  --hover-border: var(--color-accent, #d4a373);
-  --detail-fill: var(--node-detail-bg, #efeae4);
-  --detail-border: var(--node-detail-border, #c7b28a);
-  --title: var(--node-title, #4a3e32);
-  --text: var(--node-text, #5c4f43);
-  --summary: var(--node-summary, #7a6f64);
-  --switch-bg: var(--color-bg-muted, #efeae4);
-  --switch-active: var(--color-bg-card, #ffffff);
-  --switch-text: var(--color-text-muted, #7a6f64);
-  --switch-text-active: var(--color-text, #4a3e32);
-  --unread: #B4533C;   /* brick red unread dot, same in every theme */
-}
-
-/* ---- Colors: WARM = "Cottage warmth" sepia palette ---- */
-[data-theme="warm"] .mindmap {
+  --unread: #B4533C;          /* Brick: unread dot, same in every theme */
   --map-bg: #FFF8F0;          /* Linen */
   --map-dots: #E6D5C3;        /* Biscuit */
   --map-line: #A89279;        /* Sandstone */
@@ -52,6 +29,28 @@
   --switch-active: #FFF8F0;   /* Linen */
   --switch-text: #6B5744;     /* Walnut */
   --switch-text-active: #4A3728;
+}
+
+/* ---- Colors: COOL (from Marena's cool theme variables, for now) ---- */
+[data-theme="cool"] .mindmap {
+  --map-bg: var(--color-bg-card, #ffffff);
+  --map-dots: var(--color-border, #dde3e7);
+  --map-line: var(--node-detail-border, #b8c4ce);
+  --main-fill: var(--color-bg-card, #ffffff);
+  --main-border: var(--node-main-border, #5b7a8c);
+  --point-fill: var(--color-bg-card, #ffffff);
+  --point-hover-fill: var(--node-detail-bg, #e9edf0);
+  --point-border: var(--node-point-border, #7a9eb3);
+  --hover-border: var(--color-accent, #8fa3ad);
+  --detail-fill: var(--node-detail-bg, #e9edf0);
+  --detail-border: var(--node-detail-border, #b8c4ce);
+  --title: var(--node-title, #5b7a8c);
+  --text: var(--node-text, #5b7a8c);
+  --summary: var(--node-summary, #8a97a0);
+  --switch-bg: var(--color-bg-muted, #e9edf0);
+  --switch-active: var(--color-bg-card, #ffffff);
+  --switch-text: var(--color-text-muted, #8a97a0);
+  --switch-text-active: var(--color-text, #5b7a8c);
 }
 
 /* ---- Map container (Marena's frame + shadow) ---- */
