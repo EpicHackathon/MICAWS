@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useMeetingProcessor } from './hooks/useMeetingProcessor.js';
 import { demoBatches } from './shared/demo.js';
 import MindMap from './components/MindMap.jsx';
+import { mockMeeting } from './shared/mockMeeting.js';
 export function MeetingResults({ segments, isRecording, clearTranscript, children }) {
   const processor = useMeetingProcessor(segments, isRecording);
   const { state: { nodes, edges, actionItems }, error, isProcessing, processPending, reset } = processor;
