@@ -2,7 +2,7 @@ import React from 'react';
 import { ReactFlow, Background, Controls } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-export default function MindMap({ nodes, edges }) {
+export default function MindMap({ nodes, edges, selectedNodeId, onSelectNode }) {
   const positions = new Map();
   let nextColumn = 0;
   function place(node, depth) {
@@ -20,8 +20,11 @@ export default function MindMap({ nodes, edges }) {
     id: node.id,
     position: positions.get(node.id) ?? { x: 0, y: 0 },
     data: { label: node.label },
+    selected: node.id === selectedNodeId,
+    ariaLabel: node.label + ', importance ' + node.importance + ' out of 5. Select for details.',
   }));
 
+  // Manual edge editing is not yet supported; edges are derived from parentId.
   return (
     <div style={{ height: '100%', minHeight: 400, border: '1px solid #ddd', borderRadius: 8 }}>
       <ReactFlow
@@ -30,10 +33,13 @@ export default function MindMap({ nodes, edges }) {
         edges={edges}
         nodesDraggable={false}
         nodesConnectable={false}
+        edgesReconnectable={false}
+        deleteKeyCode={null}
+        onNodeClick={(_, node) => onSelectNode?.(node.id)}
         fitView
       >
         <Background />
-        <Controls />
+        <Controls showInteractive={false} />
       </ReactFlow>
     </div>
   );
