@@ -136,6 +136,7 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
         edgesReconnectable={false}
         deleteKeyCode={null}
         fitView
+        fitViewOptions={{ maxZoom: 1 }}
         defaultEdgeOptions={{ type: sides.edgeType }}
         onNodeClick={handleNodeClick}
         onPaneClick={handlePaneClick}

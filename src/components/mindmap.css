@@ -1,3 +1,8 @@
+/* The map uses its own clean font, whatever font the rest of the page uses. */
+.mindmap {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
 /* The three shapes. Each box gets ONE of these class names. */
 
 /* MAIN IDEA: squared-off rectangle, thickest border, biggest */
