@@ -168,3 +168,9 @@ docker compose logs --tail=50
 Open http://localhost:5173. The frontend remains running. The diart service only verifies its import, prints "diart ready", and exits; it does not start an audio API.
 
 Stop the project with `docker compose down`. Local environment files are excluded from image builds, and Compose loads .env.local into the frontend container at runtime. Recreate the frontend after changing environment settings with `docker compose up -d --force-recreate frontend`.
+
+
+## Live microphone integration
+
+This merged version captures microphone audio in 10-second chunks and updates the transcript and meeting state while recording. See LIVE_TRANSCRIPTION.md for startup instructions and limitations. Main's map styles, focus navigation, manual input, sample meetings, and Docker files are preserved. Run the Python transcription server separately from Vite; the existing Docker Compose configuration does not start WhisperX.
+

@@ -2,6 +2,7 @@ import { defineConfig, loadEnv } from 'vite';
 import { createHandler } from './api/process.js';
 
 export default defineConfig(({ mode }) => ({
+  server: { proxy: { '/api/transcribe': { target: process.env.TRANSCRIPTION_URL || 'http://127.0.0.1:8000', changeOrigin: true } } },
   plugins: [{
     name: 'local-meeting-api',
     configureServer(server) {
