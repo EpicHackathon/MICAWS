@@ -68,6 +68,11 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
+/* Hide React Flow's connection dots on the box edges (not in our design). */
+.mindmap .react-flow__handle {
+  opacity: 0;
+}
+
 /* BUBBLE: move the connection dots to the center of each box (and hide them),
    so the straight lines look like spokes coming out of the middle. */
 .mindmap-bubble .react-flow__handle {
