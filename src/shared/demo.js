@@ -16,11 +16,11 @@ export const demoBatches = [
   ],
 ];
 
-const launch = summary => ({ id: 'launch', label: 'Product Launch', summary, importance: 5 });
+const launch = summary => ({ id: 'launch', label: 'Product Launch', summary, importance: 5, parentId: null });
 const launchTask = { id: 'checklist', text: 'Priya will draft the launch checklist.' };
 const marketing = {
   id: 'marketing', label: 'Instagram Outreach', summary: 'Instagram will be used for beta outreach.',
-  importance: 4,
+  importance: 4, parentId: 'launch',
 };
 const relationship = { id: 'launch-marketing', source: 'launch', target: 'marketing' };
 const marketingTask = { id: 'campaign', text: 'Sam will draft the Instagram campaign.' };

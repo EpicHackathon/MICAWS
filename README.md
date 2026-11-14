@@ -126,3 +126,13 @@ The endpoint has no user authentication. Use mock mode for a public demo unless 
 - [ ] Test recording stop and meeting reset in your team's app.
 - [ ] Create a Gemini key, configure it server-side, and try a live batch.
 - [ ] Deploy to Vercel, set environment variables, and verify the deployed endpoint.
+
+## Three-level meeting hierarchy
+
+Each node has a required parentId. A nonempty meeting has one root with parentId null and importance 5. Main points reference the root, and details reference a main point. Other nodes use importance 1–4. The tree has at most three levels; it can begin with only the root.
+
+Every non-root node has exactly one edge from its parent, with id "<parentId>-<childId>". Validation rejects cycles, missing parents, extra or missing edges, and changes to an existing parent. The empty initial state remains valid before meaningful speech arrives.
+
+The map places the root above its main points and details. With MEETING_MOCK=true, use the three sample-batch buttons and expand Meeting state JSON to inspect parentId. Use Reset session to start again. Existing flat JSON without parentId is rejected; reset an older in-memory meeting and reprocess its transcript with the new schema.
+
+The original three sample batches keep their requested root/main-point structure. Automated tests also cover a third-level campaign detail. No actual meeting transcript or mockMeeting.js was supplied for an additional meeting fixture.

@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 const text = z.string().refine(value => value.trim().length > 0, 'Expected nonblank text');
 const node = z.strictObject({
-  id: text, label: text, summary: text, importance: z.int().min(1).max(5),
+  id: text, label: text, summary: text, importance: z.int().min(1).max(5), parentId: text.nullable(),
 });
 const edge = z.strictObject({ id: text, source: text, target: text });
 const action = z.strictObject({ id: text, text });
@@ -24,18 +24,51 @@ export const meetingSchema = stateShape.superRefine((state, ctx) => {
       ids.add(id);
     });
   }
-  const nodeIds = new Set(state.nodes.map(({ id }) => id));
-  const relationships = new Set();
-  state.edges.forEach(({ source, target }, index) => {
-    if (!nodeIds.has(source) || !nodeIds.has(target)) {
-      issue(['edges', index], 'Unknown node reference');
+  const nodes = new Map(state.nodes.map(node => [node.id, node]));
+  const roots = state.nodes.filter(node => node.parentId === null);
+  // Before meaningful speech, the complete meeting state may be empty.
+  if (state.nodes.length && roots.length !== 1) issue(['nodes'], 'Expected exactly one root');
+  if (!state.nodes.length && state.actionItems.length) issue(['actionItems'], 'Tasks require a meeting root');
+
+  state.nodes.forEach((node, index) => {
+    if ((node.parentId === null) !== (node.importance === 5)) {
+      issue(['nodes', index, 'importance'], 'Only the root must have importance 5');
     }
-    const pair = JSON.stringify([source, target].sort());
-    if (source === target || relationships.has(pair)) {
-      issue(['edges', index], 'Self-loop or duplicate relationship');
+    const seen = new Set([node.id]);
+    let current = node;
+    let depth = 1;
+    while (current.parentId !== null) {
+      const parent = nodes.get(current.parentId);
+      if (!parent) {
+        issue(['nodes', index, 'parentId'], 'Unknown parent');
+        break;
+      }
+      if (seen.has(parent.id)) {
+        issue(['nodes', index, 'parentId'], 'Cycle in hierarchy');
+        break;
+      }
+      seen.add(parent.id);
+      depth += 1;
+      if (depth > 3) {
+        issue(['nodes', index, 'parentId'], 'Tree exceeds three levels');
+        break;
+      }
+      current = parent;
     }
-    relationships.add(pair);
   });
+
+  const targets = new Set();
+  state.edges.forEach(({ id, source, target }, index) => {
+    const child = nodes.get(target);
+    if (!nodes.has(source) || !child || child.parentId !== source || source === target
+        || id !== `${source}-${target}` || targets.has(target)) {
+      issue(['edges', index], 'Expected one canonical parent-to-child edge');
+    }
+    targets.add(target);
+  });
+  for (const node of state.nodes) {
+    if (node.parentId !== null && !targets.has(node.id)) issue(['edges'], 'Missing parent-to-child edge');
+  }
 });
 
 export const requestSchema = z.strictObject({

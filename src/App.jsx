@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useMeetingProcessor } from './hooks/useMeetingProcessor.js';
 import MindMap from './components/MindMap.jsx';
+import { demoBatches } from './shared/demo.js';
 
 /**
  * MeetingResults component displays the derived state (Nodes, Edges, Actions) 
@@ -12,8 +13,7 @@ export function MeetingResults({ segments, isRecording, clearTranscript, childre
   const { state: { nodes, edges, actionItems }, error, isProcessing, processPending, reset } = processor;
 
   function resetMeeting() {
-    reset();
-    clearTranscript();
+    if (clearTranscript() !== false) reset();
   }
 
   return (
@@ -57,6 +57,7 @@ export function MeetingResults({ segments, isRecording, clearTranscript, childre
 export default function App() {
   // State for the live streaming session
   const [segments, setSegments] = useState([]);
+  const [sampleBatch, setSampleBatch] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [error, setError] = useState(null);
 
@@ -151,11 +152,14 @@ export default function App() {
   const clearSession = () => {
     if (window.confirm("Are you sure you want to reset the entire meeting transcript?")) {
         setSegments([]);
+        setSampleBatch(0);
         setIsRecording(false);
         setError(null);
         // Cleanup audio context resources on manual reset too
         if (window.audioContext) window.audioContext.close();
+        return true;
     }
+    return false;
   }
 
   return (
@@ -179,7 +183,7 @@ export default function App() {
         >
           🛑 Stop & Process Stream
         </button>
-         <button onClick={clearSession} style={{padding: '10px 20px'}}>Reset Session</button>
+         
       </div>
 
       {/* The results component now consumes the recording state */}
@@ -190,6 +194,15 @@ export default function App() {
       >
         {({ isProcessing }) => (
           <>
+            <button
+              disabled={isRecording || isProcessing || sampleBatch >= demoBatches.length}
+              onClick={() => {
+                setSegments(current => [...current, ...demoBatches[sampleBatch]]);
+                setSampleBatch(current => current + 1);
+              }}
+            >
+              {sampleBatch < demoBatches.length ? `Send sample batch ${sampleBatch + 1}` : 'All sample batches sent'}
+            </button>
             <p style={{ color: isProcessing ? 'blue' : 'gray', fontWeight: 'bold' }}>
                 {isProcessing ? "🧠 AI processing current segments..." : `Awaiting input. Segments captured: ${segments.length}`}
             </p>
