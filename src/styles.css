@@ -1,4 +1,8 @@
-/* Global Reset */
+/* ========================================= */
+/* COZY MINIMALIST STYLESHEET V2 (REPLACING previous styles) */
+/* ========================================= */
+
+/* Global Reset & Base Colors */
 *, *::before, *::after {
     box-sizing: border-box;
     margin: 0;
@@ -6,28 +10,28 @@
 }
 
 body {
-    background-color: #f9fafb; /* Soft off-white background */
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f7f5f2; /* Creamy Off-White Background */
+    font-family: 'Georgia', serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 /* General Container Styling */
 .app-container {
-    max-width: 800px; /* Limits width for better reading experience */
+    max-width: 900px; /* Slightly wider for better content flow */
     margin: 2rem auto;
     padding: 0 1rem;
 }
 
 /* Typography and Spacing */
 h1, h2 {
-    color: #1f2937; /* Dark gray text color */
+    color: #4a3e32; /* Deep warm brown/charcoal color for main headings */
     margin-top: 0.5em;
     margin-bottom: 0.5em;
     font-weight: 600;
 }
 
 p {
-    line-height: 1.6;
-    color: #4b5563; /* Medium gray text */
+    line-height: 1.7;
+    color: #6b7280; /* Soft medium gray text */
 }
 
 /* Button Styling */
@@ -36,9 +40,8 @@ button {
     font-size: 1em;
     cursor: pointer;
     border: none;
-    border-radius: 8px;
-    transition: background-color 0.2s, transform 0.1s;
-    margin-right: 10px; /* Spacing between buttons */
+    border-radius: 25px; /* More rounded, softer look */
+    transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.1s ease;
 }
 
 button[disabled] {
@@ -48,19 +51,23 @@ button[disabled] {
 
 /* Specific Button Styles for Roles */
 .btn-primary {
-    background-color: #3b82f6; /* Blue - Primary Action (Start) */
+    background-color: #8b4513; /* Warm earthy brown - Primary Action (Start) */
     color: white;
+    box-shadow: 0 2px 5px rgba(139, 69, 19, 0.4);
 }
 .btn-primary:hover:not([disabled]) {
-    background-color: #2563eb;
+    background-color: #a0522d; /* Slightly lighter brown on hover */
+    box-shadow: 0 4px 8px rgba(139, 69, 19, 0.5);
 }
 
 .btn-secondary {
-    background-color: #ffc107; /* Yellow/Amber - Secondary Action (Stop) */
-    color: black;
+    background-color: #c7b28a; /* Muted tan/beige - Secondary Action (Stop) */
+    color: #4a3e32;
+    box-shadow: 0 2px 5px rgba(199, 178, 138, 0.4);
 }
 .btn-secondary:hover:not([disabled]) {
-    background-color: #e0a800;
+    background-color: #bfa780; /* Slightly darker tan on hover */
+    box-shadow: 0 4px 8px rgba(199, 178, 138, 0.5);
 }
 
 /* Container for Control Panel */
@@ -78,8 +85,9 @@ ul {
     margin: 10px 0 20px 0;
 }
 li {
-    padding: 5px 0;
-    border-bottom: 1px solid #e5e7eb; /* Subtle divider */
+    padding: 8px 0;
+    border-bottom: 1px solid #e5e7eb; /* Very light divider */
+    color: #6b7280;
 }
 li:last-child {
     border-bottom: none;
@@ -88,8 +96,8 @@ li:last-child {
 /* Details/Summary Styling */
 details summary {
     cursor: pointer;
-    font-weight: bold;
-    color: #3b82f6;
+    font-weight: 600;
+    color: #4a3e32;
 }
 
 @keyframes pulse {
@@ -103,8 +111,8 @@ details summary {
     width: 15px;
     height: 15px;
     border-radius: 50%;
-    background-color: #38a169; /* Green when active */
-    box-shadow: 0 0 8px rgba(56, 161, 105, 0.7);
+    background-color: #8b4513; /* Use primary brown for consistency */
+    box-shadow: 0 2px 5px rgba(139, 69, 19, 0.6);
     animation: pulse 1s infinite ease-in-out;
 }
 
