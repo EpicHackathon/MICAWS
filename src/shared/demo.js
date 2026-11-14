@@ -42,5 +42,24 @@ export function getDemoState(segments, previousState) {
   const latest = demoBatches.findLastIndex(batch => batch.some(example =>
     segments.some(segment => example.time === segment.time && example.text === segment.text),
   ));
-  return demoStates[latest] ?? previousState;
+  if (latest < 0) return previousState;
+
+  // Replayed sample batches must not roll an already completed demo backward.
+  const completed = demoStates.findLastIndex(state =>
+    state.nodes.every(node => previousState.nodes.some(existing =>
+      existing.id === node.id && existing.summary === node.summary)),
+  );
+  const sample = demoStates[Math.max(latest, completed)];
+  const merge = (existing, incoming, update) => {
+    const items = new Map(existing.map(item => [item.id, item]));
+    for (const item of incoming) {
+      if (update || !items.has(item.id)) items.set(item.id, item);
+    }
+    return [...items.values()];
+  };
+  return {
+    nodes: merge(previousState.nodes, sample.nodes, true),
+    edges: merge(previousState.edges, sample.edges, false),
+    actionItems: merge(previousState.actionItems, sample.actionItems, false),
+  };
 }

@@ -79,3 +79,37 @@ test('caller keeps the last valid state on failure and can retry the same batch'
   state = await processTranscript(demoBatches[1], state);
   assert.deepEqual(state, demoStates[1]);
 });
+
+test('mock replay preserves the latest summary and unrelated meeting content', async () => {
+  const previous = structuredClone(demoStates[2]);
+  previous.nodes.push({ id: 'budget', label: 'Budget', summary: 'Budget agreed.', importance: 4 });
+  previous.actionItems.push({ id: 'budget-task', text: 'Alex will check the budget.' });
+  const response = await send(mock, demoBatches[0], previous);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), previous);
+});
+
+test('service validates input and skips empty batches before contacting server', async t => {
+  const fetchMock = t.mock.method(globalThis, 'fetch', async () => {
+    throw new Error('Unexpected request');
+  });
+  assert.deepEqual(await processTranscript([], demoStates[0]), demoStates[0]);
+  await assert.rejects(processTranscript([{ time: -1, speaker: null, text: 'bad' }]), /Invalid transcript/);
+  assert.equal(fetchMock.mock.callCount(), 0);
+});
+
+test('service exposes connection failures and rejects invalid successful responses', async t => {
+  t.mock.method(globalThis, 'fetch', async () => { throw new TypeError('fetch failed'); });
+  await assert.rejects(processTranscript(demoBatches[0]), /Could not reach/);
+  globalThis.fetch.mock.mockImplementation(async () => Response.json(invalidEdge));
+  await assert.rejects(processTranscript(demoBatches[0]), /invalid meeting state/);
+});
+
+test('invalid JSON request returns 400 and self-loops are rejected', async () => {
+  const response = await mock(new Request('http://localhost/api/process', {
+    method: 'POST', body: '{',
+  }));
+  assert.equal(response.status, 400);
+  const state = { ...demoStates[0], edges: [{ id: 'loop', source: 'launch', target: 'launch' }] };
+  assert.equal(meetingSchema.safeParse(state).success, false);
+});

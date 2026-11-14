@@ -32,11 +32,11 @@ MICAWS/
 
 ## Run the mock locally
 
-Open a terminal in the MICAWS folder, where package.json lives. Install Node.js 22.12 or later in the Node 22 series, then run:
+In VS Code, choose **File → Open Folder** and select MICAWS, then choose **Terminal → New Terminal**. Node.js runs this project on your computer. Check your installation with `node --version`. This project targets Node.js 22.12 or later in the Node 22 series. Run these commands in the terminal.
 
 ```powershell
-npm install
-Copy-Item .env.example .env.local
+npm.cmd ci
+if (!(Test-Path .env.local)) { Copy-Item .env.example .env.local }
 npm test
 npm run dev
 ```
@@ -61,6 +61,8 @@ Invoke-RestMethod -Uri http://localhost:5173/api/process -Method Post -ContentTy
 ```
 
 `npm test` runs independently of Vite and covers the three sequential calls, validation, provider errors, quota errors and retry. `npm run build` checks the frontend production build. The local Vite middleware calls the same handler that Vercel serves.
+
+Open `.env.local` in VS Code and set `MEETING_MOCK=true` for the sample demo. Save the file. After changing environment settings, press **Ctrl+C** in the terminal and run `npm.cmd run dev` again. Keep the terminal open while using the app. The setup command preserves an existing `.env.local` file and key.
 
 ## Enable Gemini
 
@@ -91,6 +93,19 @@ return (
 ```
 
 Mount one hook per meeting. When starting over, reset the hook and clear the transcript together. If the speech recognizer delivers a last finalized segment after recording stops, append it normally. The hook flushes it when it becomes visible.
+
+The Python transcriber in this repository returns `{ id, start, end, speaker, text }`. Convert each finalized chunk before passing it to the hook.
+
+```js
+const finalizedSegments = transcriptionResult.map(segment => ({
+  time: segment.start,
+  speaker: segment.speaker,
+  text: segment.text,
+}));
+setSegments(current => [...current, ...finalizedSegments]);
+```
+
+Append each chunk once. Keep transcription IDs in your integration layer to detect repeated chunk delivery. The Python transcription service and microphone controls still need to be connected to this React demo.
 
 The mind-map developer adapts nodes for React Flow in the view layer. For example, use `nodes.map((node, index) => ({ id: node.id, position: { x: (index % 3) * 220, y: Math.floor(index / 3) * 100 }, data: { label: node.label, summary: node.summary, importance: node.importance } }))`. Edges already have React Flow's required id/source/target fields. Preserve positions by ID in the view if you support dragging. The dashboard can render each task's text using its id as the React key.
 
