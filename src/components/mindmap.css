@@ -1,4 +1,4 @@
-/* The three shapes. Each node gets ONE of these class names. */
+/* The three shapes. Each box gets ONE of these class names. */
 
 /* MAIN IDEA: squared-off rectangle, thickest border, biggest */
 .react-flow__node.shape-main {
@@ -18,6 +18,26 @@
   font-size: 14px;
   font-weight: 600;
   padding: 12px;
+  cursor: pointer;
+}
+
+/* MAIN POINT, ZOOMED IN: bigger, label + summary inside (like the sketch) */
+.react-flow__node.shape-point.is-focus {
+  width: 280px;
+  text-align: left;
+  padding: 14px 18px;
+  cursor: default;
+}
+.node-title {
+  font-size: 17px;
+  font-weight: 700;
+}
+.node-summary {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 400;
+  color: #3a3f4a;
+  line-height: 1.4;
 }
 
 /* DETAIL: pill, thin border, light fill, smallest */
@@ -27,5 +47,5 @@
   border: 1px solid #a9afba;
   background: #eceef2;
   font-size: 12px;
-  padding: 6px 12px;
+  padding: 8px 12px;
 }
