@@ -134,7 +134,3 @@ export default function App() {
     </main>
   );
 }
-      </MeetingResults>
-    </main>
-  );
-}
