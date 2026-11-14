@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ReactFlow, Background, Controls, Panel } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './mindmap.css';
 
 // Box sizes, matching mindmap.css. (Zoomed-in main point is 280 wide.)
-const BOX_WIDTH = { main: 240, point: 170, detail: 170 };
-const BOX_HEIGHT = { main: 56, point: 44, detail: 34 };   // close enough for centering
+const BOX_WIDTH = { main: 240, point: 170, detail: 196 };
+const BOX_HEIGHT = { main: 56, point: 44, detail: 58 };   // close enough for centering
 
 // Which level is this box? Look at its parent.
 function getLevel(node, mainIdea) {
@@ -44,6 +44,43 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
   // mapStyle = 'tree', 'linear' or 'bubble'
   const [mapStyle, setMapStyle] = useState('tree');
 
+  // UNREAD DOTS: ids of MAIN POINTS that got new info (live) nobody has looked at yet.
+  // Only main points (the rounded rectangles) ever get a dot.
+  const [unread, setUnread] = useState(() => new Set());
+  const lastSeen = useRef(null);       // what each topic said last time: id -> "label|summary"
+  const focusRef = useRef(focusId);    // which point you're looking at right now
+  focusRef.current = focusId;
+  useEffect(() => {
+    const now = new Map(allNodes.map(node => [node.id, node.label + '|' + node.summary]));
+    const before = lastSeen.current;
+    lastSeen.current = now;
+    if (!before) return;   // first time the map appears: nothing is "new" yet
+
+    // A completely different meeting (e.g. "Load sample meeting")? That's not live talk: no dots.
+    const sameMeeting = [...now.keys()].some(id => before.has(id));
+    if (!sameMeeting) { setUnread(new Set()); return; }
+
+    // Live update: find what changed, then point the dot at its MAIN POINT.
+    const main = allNodes.find(node => node.parentId === null);
+    const byId = new Map(allNodes.map(node => [node.id, node]));
+    const pointsToDot = new Set();
+    for (const node of allNodes) {
+      if (before.get(node.id) === now.get(node.id)) continue;      // unchanged
+      if (node.parentId === main?.id) pointsToDot.add(node.id);    // a main point changed
+      else if (byId.get(node.parentId)?.parentId === main?.id) pointsToDot.add(node.parentId); // one of its details changed
+    }
+    pointsToDot.delete(focusRef.current);   // you're already looking at that one
+    if (pointsToDot.size) setUnread(current => new Set([...current, ...pointsToDot]));
+  }, [allNodes]);
+
+  function markRead(ids) {
+    setUnread(current => {
+      const next = new Set(current);
+      ids.forEach(id => next.delete(id));
+      return next;
+    });
+  }
+
   const mainIdea = allNodes.find(node => node.parentId === null);
 
   // Who sits at the TOP of the tree right now?
@@ -79,7 +116,10 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
     // Zoomed-in main point shows its summary under the title. Everything else: just the label.
     const label = isFocus
       ? <><div className="node-title">{node.label}</div><div className="node-summary">{node.summary}</div></>
-      : node.label;
+      : level === 'detail'
+        // A2 "peek line": detail pill shows its title + one short line from its summary
+        ? <><div className="detail-title">{node.label}</div><div className="detail-summary">{node.summary}</div></>
+        : node.label;
 
     // React Flow pins a box by its TOP-LEFT corner.
     // Shift by half the width (and height) so the box's CENTER lands on its spot.
@@ -97,13 +137,16 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
         ? { x: center.x, y: center.y - height / 2 }                  // linear: keep each column's left edges lined up
         : { x: center.x - width / 2, y: center.y - height / 2 };     // bubble: center both ways
 
+    // Dot only on main points in the big picture (not while you're zoomed into it).
+    const hasUnread = level === 'point' && !isFocus && unread.has(node.id);
+
     return {
       id: node.id,
       position,
       data: { label },
-      className: `shape-${level}${isFocus ? ' is-focus' : ''}`,   // <- picks the shape
+      className: `shape-${level}${isFocus ? ' is-focus' : ''}${hasUnread ? ' has-unread' : ''}`,   // <- picks the shape
       selected: node.id === selectedNodeId,                         // Micah: highlight the box shown in the details panel
-      ariaLabel: node.label + ', importance ' + node.importance + ' out of 5. Select for details.',
+      ariaLabel: node.label + (hasUnread ? ', has new updates' : '') + ', importance ' + node.importance + ' out of 5. Select for details.',
       sourcePosition: sides.source,
       targetPosition: sides.target,
     };
@@ -115,17 +158,20 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
     // Team design: clicking a main point zooms in (summary shows inside the box).
     // Micah's details panel still opens from the topic list view.
     if (clicked.parentId === mainIdea?.id) setFocusId(clicked.id);
+    markRead([clicked.id]);   // you looked at it, so its dot goes away
   }
 
   // Click empty space -> back to the big picture.
+  // Leaving a zoomed-in point counts as having seen its details.
   function handlePaneClick() {
+    if (focusId) markRead([focusId]);
     setFocusId(null);
   }
 
   return (
     <div
       className={`mindmap mindmap-${mapStyle}`}
-      style={{ height: '100%', minHeight: 400, border: '1px solid #ddd', borderRadius: 8 }}
+      /* size, border and colors come from mindmap.css (theme-aware) */
     >
       <ReactFlow
         key={mapStyle + '|' + nodes.map(node => node.id).join('|')}
@@ -136,6 +182,7 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
         edgesReconnectable={false}
         deleteKeyCode={null}
         fitView
+        fitViewOptions={{ maxZoom: 1 }}
         defaultEdgeOptions={{ type: sides.edgeType }}
         onNodeClick={handleNodeClick}
         onPaneClick={handlePaneClick}

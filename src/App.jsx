@@ -1,5 +1,5 @@
 ﻿import { useMicrophone } from './hooks/useMicrophone.js';
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useMeetingProcessor } from './hooks/useMeetingProcessor.js';
 import MeetingView from './components/MeetingView.jsx';
 import ManualInput from './components/ManualInput.jsx';
@@ -25,13 +25,15 @@ export function MeetingResults({ segments, isRecording, clearTranscript, onManua
   return (
     <>
       {children?.({ isProcessing }) || null}
-      <div style={{ marginTop: '10px' }}>
-        <button onClick={() => { retryTranscription?.(); void processPending(); }} disabled={isProcessing}>Process pending / retry</button>
-        <button onClick={resetMeeting}>Reset session</button>
+      <div className="control-actions">
+        <button className="btn-ghost" onClick={() => { retryTranscription?.(); void processPending(); }} disabled={isProcessing}>
+          Process pending / retry
+        </button>
+        <button className="btn-ghost" onClick={resetMeeting}>Reset session</button>
       </div>
 
-      {error && <p role="alert" style={{ color: 'red', border: '1px solid red', padding: '10px' }}>Error: {error}</p>}
-      
+      {error && <p role="alert" className="error-message">Error: {error}</p>}
+
       <MeetingView key={'view-' + viewVersion} state={state} />
       <ManualInput key={'input-' + viewVersion} disabled={captureBusy || isRecording || isProcessing || !onManualSegment} onSubmit={onManualSegment} />
     </>
@@ -46,6 +48,11 @@ export default function App() {
   const [segments, setSegments] = useState([]);
   const [sampleBatch, setSampleBatch] = useState(0);
   const nextStart = useRef(0);
+  // Marena's color theme switcher (neutral / warm / cool), applied to <body>.
+  const [theme, setTheme] = useState('neutral');
+  useEffect(() => {
+    document.body.dataset.theme = theme;
+  }, [theme]);
   const microphone = useMicrophone((transcript, endSeconds) => {
     nextStart.current = Math.max(nextStart.current, endSeconds);
     setSegments(current => [...current, ...transcript.map(segment => ({
@@ -70,26 +77,34 @@ export default function App() {
 
   return (
     <main className="app-container">
-      <h1 className="text-3xl font-bold" style={{ color: isRecording ? 'red' : '#333' }}>Meeting Processor Dashboard</h1>
-      <p>Status: {isRecording ? '🔴 LIVE RECORDING IN PROGRESS...' : '🟢 Ready. Click Start to begin session capture.'}</p>
-      
+      <header className="app-header">
+        <div className="app-title-row">
+          <h1 className="app-title">Meeting Processor Dashboard</h1>
+          {isRecording && (
+            <span className="recording-badge">
+              <span className="activity-indicator" aria-hidden="true"></span>
+              Live recording
+            </span>
+          )}
+        </div>
+        <p className="app-status">
+          Status: {isRecording ? '🔴 Live recording in progress...' : '🟢 Ready. Click Start to begin session capture.'}
+        </p>
+        <div className="theme-switch" role="group" aria-label="Color theme">
+          <button type="button" data-active={theme === 'neutral'} onClick={() => setTheme('neutral')}>Neutral</button>
+          <button type="button" data-active={theme === 'warm'} onClick={() => setTheme('warm')}>Warm</button>
+          <button type="button" data-active={theme === 'cool'} onClick={() => setTheme('cool')}>Cool</button>
+        </div>
+      </header>
+
       {/* CONTROL PANEL */}
       <div className="control-panel">
-        <button 
-          onClick={startRecording} 
-          disabled={busy}
-          style={{ padding: '10px 20px', fontSize: '1em', backgroundColor: isRecording ? '#ccc' : 'green', color: 'white', cursor: 'pointer' }}
-        >
+        <button className="btn-primary" onClick={startRecording} disabled={busy}>
           🎤 Start Recording
         </button>
-        <button 
-          onClick={stopRecording} 
-          disabled={!isRecording}
-          style={{ padding: '10px 20px', fontSize: '1em', backgroundColor: '#ffc107', color: 'black', cursor: 'pointer' }}
-        >
+        <button className="btn-secondary" onClick={stopRecording} disabled={!isRecording}>
           🛑 Stop & Process Stream
         </button>
-         
       </div>
 
       {microphone.status === 'starting' && <p role="status">Waiting for microphone permission…</p>}
@@ -117,6 +132,7 @@ export default function App() {
           <>
             <button
               disabled={busy || isProcessing || sampleBatch >= demoBatches.length}
+              className="btn-ghost"
               onClick={() => {
                 setSegments(current => [...current, ...demoBatches[sampleBatch]]);
                 setSampleBatch(current => current + 1);
@@ -124,8 +140,8 @@ export default function App() {
             >
               {sampleBatch < demoBatches.length ? `Send sample batch ${sampleBatch + 1}` : 'All sample batches sent'}
             </button>
-            <p style={{ color: isProcessing ? 'blue' : 'gray', fontWeight: 'bold' }}>
-                {isProcessing ? "🧠 AI processing current segments..." : `Awaiting input. Segments captured: ${segments.length}`}
+            <p className={isProcessing ? 'processing-status' : 'idle-status'}>
+                {isProcessing ? '🧠 AI processing current segments...' : `Awaiting input. Segments captured: ${segments.length}`}
             </p>
           </>
         )}
