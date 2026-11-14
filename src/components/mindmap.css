@@ -1,0 +1,31 @@
+/* The three shapes. Each node gets ONE of these class names. */
+
+/* MAIN IDEA: squared-off rectangle, thickest border, biggest */
+.react-flow__node.shape-main {
+  width: 240px;
+  border-radius: 4px;
+  border: 2.5px solid #16181d;
+  font-size: 18px;
+  font-weight: 700;
+  padding: 16px;
+}
+
+/* MAIN POINT: rounded rectangle, medium border */
+.react-flow__node.shape-point {
+  width: 170px;
+  border-radius: 14px;
+  border: 1.5px solid #3a3f4a;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px;
+}
+
+/* DETAIL: pill, thin border, light fill, smallest */
+.react-flow__node.shape-detail {
+  width: 170px;
+  border-radius: 999px;
+  border: 1px solid #a9afba;
+  background: #eceef2;
+  font-size: 12px;
+  padding: 6px 12px;
+}
