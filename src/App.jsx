@@ -18,11 +18,11 @@ export function MeetingResults({ segments, isRecording, clearTranscript, childre
 
   return (
     <>
-      {children?.({ isProcessing })}
+      {children?.({ isProcessing }) || null}
       <div style={{ marginTop: '10px' }}>
         <button onClick={processPending} disabled={isProcessing}>Process pending / retry</button>
         <button onClick={resetMeeting}>Reset session</button>
-      </div >
+      </div>
 
       {error && <p role="alert" style={{ color: 'red', border: '1px solid red', padding: '10px' }}>Error: {error}</p>}
       
@@ -33,7 +33,7 @@ export function MeetingResults({ segments, isRecording, clearTranscript, childre
 
       <h2 style={{marginTop: '30px'}}>Mind Map</h2>
       {/* MindMap component visualization */}
-      <div style={{height: '400px', border: '1px solid #eee' }}>
+      <div style={{height: '400px', border: '1px solid #eee'}}>
         <MindMap nodes={nodes} edges={edges} />
       </div>
 
@@ -60,26 +60,73 @@ export default function App() {
   const [isRecording, setIsRecording] = useState(false);
   const [error, setError] = useState(null);
 
-  // --- CORE CONTROL HANDLERS (Mocked) ---
-  const startRecording = () => {
+  // --- CORE CONTROL HANDLERS (Mocked/WebAudio Skeleton) ---
+  const startRecording = async () => {
     if (isRecording) return;
-    console.log("🎤 Microphone recording started.");
-    setIsRecording(true);
-    setError(null);
-    setSegments([]); 
-    // *** FUTURE: Initialize Web Audio API and Whisper stream connection here ***
+
+    // 1. Microphone Availability Check
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setError("Browser does not support microphone access required for live recording.");
+        setIsRecording(false);
+        return;
+    }
+
+    try {
+      // Request permission and get the stream
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      // Initialize Audio Context and Graph Nodes
+      window.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const source = window.audioContext.createMediaStreamSource(stream);
+
+      // Connect stream to an Analyser Node for real-time data inspection
+      source.connect(window.audioContext.destination); 
+      window.analyser = window.audioContext.createAnalyser();
+      source.connect(window.analyser);
+      
+      console.log("✅ Microphone access granted and AudioContext started.");
+
+      // Set up interval to process audio chunks (Simulates Whisper chunk processing)
+      window.processorInterval = setInterval(() => {
+        if (!isRecording) return;
+        const bufferSize = 1024;
+        const buffer = new Float32Array(bufferSize);
+        window.analyser.getFloatTimeDomainData(buffer);
+        
+        // *** SIMULATION POINT: This entire block represents the integration with your Whisper Backend/API ***
+        // In a real app, you'd send 'buffer' data (or a chunk buffer) to an endpoint and await structured JSON output.
+        const simulatedSegment = { 
+            time: Date.now() / 1000, // Current time as timestamp
+            speaker: ['Alice', 'Bob', 'Charlie'][Math.floor(Math.random() * 3)], // Random Speaker Diarization Simulation
+            text: `[Simulated Whisper chunk] Processed audio buffer data at ${new Date().toLocaleTimeString()}. This represents a successful diarized transcription segment.` 
+        };
+        processLiveSegment(simulatedSegment);
+
+      }, 500); // Check for new chunks every 500ms (adjust based on desired latency)
+
+    } catch (err) {
+        console.error("Error accessing microphone:", err);
+        setError(`Failed to access the microphone. Please ensure you grant permission in your browser and a mic is connected. (${err.name})`);
+        setIsRecording(false);
+    }
   };
 
   const stopRecording = () => {
     if (!isRecording) return;
     console.log("🛑 Microphone recording stopped.");
+    clearInterval(window.processorInterval); // Stop the interval timer
+    
+    // Cleanup Web Audio Context resources
+    if (window.audioContext) window.audioContext.close();
+    window.audioContext = null;
+    window.analyser = null;
+
     setIsRecording(false);
-    // Trigger final processing on stop, simulating the end of a session chunk
-    setSegments(prev => [...prev, { time: Date.now() / 1000, speaker: 'SYSTEM', text: 'Meeting segment finalized.' }]);
   };
 
   /**
    * This function simulates receiving diarized, finalized segments from the Whisper pipeline/stream handler.
+ * This is the core ingestion point for all live data.
    */
   const processLiveSegment = (segment) => {
     // CRITICAL STEP: Data validation and structure enforcement happens here before setting state.
@@ -106,6 +153,8 @@ export default function App() {
         setSegments([]);
         setIsRecording(false);
         setError(null);
+        // Cleanup audio context resources on manual reset too
+        if (window.audioContext) window.audioContext.close();
     }
   }
 
@@ -150,7 +199,7 @@ export default function App() {
 
       {/* DEBUGGING/MOCK INPUT FOR TESTING */}
       <div style={{marginTop: '40px', borderTop: '1px dashed #ccc', paddingTop: '20px'}}>
-        <h3>[Dev Tools] Mock Input (For testing diarization flow)</h3>
+        <h3 style={{fontSize:'1.3em'}}>🛠️ Dev Tools (Test Input)</h3>
         <p>Click this button repeatedly to simulate incoming, diarized audio chunks.</p>
          <button onClick={simulateSegment} disabled={!isRecording}>Simulate Segment Chunk</button>
       </div>
