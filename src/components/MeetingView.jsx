@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import MindMap from './MindMap.jsx';
 import { mockMeeting } from '../shared/mockMeeting.js';
 
@@ -26,7 +26,7 @@ export default function MeetingView({ state: liveState }) {
       <div id="topic-view">
         {!nodes.length ? <p>No topics yet. Send a sample batch or enter test text below.</p> :
           showMap ? (
-            <div style={{ height: 450, marginTop: 12 }}>
+            <div className="mindmap-frame">
               <MindMap nodes={nodes} edges={edges} selectedNodeId={selectedNodeId}
                 onSelectNode={setSelectedNodeId} />
             </div>
@@ -44,8 +44,7 @@ export default function MeetingView({ state: liveState }) {
           )}
       </div>
       {selected && (
-        <section aria-label="Node details" aria-live="polite"
-          style={{ border: '1px solid #aaa', borderRadius: 8, padding: 16, marginTop: 16 }}>
+        <section aria-label="Node details" aria-live="polite" className="node-details-panel">
           <button type="button" onClick={() => setSelectedNodeId(null)}>Close node details</button>
           <h3>{selected.label}</h3>
           <p>Importance {selected.importance}/5</p>
