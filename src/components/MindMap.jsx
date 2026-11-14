@@ -2,8 +2,14 @@ import React from 'react';
 import { ReactFlow, Background, Controls } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-export default function MindMap({ nodes, edges }) {
-  const positions = new Map();
+  export default function MindMap({ nodes: allNodes, edges: allEdges })
+  {
+    // BIG PICTURE: only show the main idea + main points
+    const mainIdea = allNodes.find(node => node.parentId === null);
+    const nodes = allNodes.filter(node => node === mainIdea ||
+  node.parentId === mainIdea?.id);
+    const edges = allEdges.filter(edge => edge.source ===
+  mainIdea?.id);
   let nextColumn = 0;
   function place(node, depth) {
     const children = nodes.filter(child => child.parentId === node.id);
@@ -38,3 +44,4 @@ export default function MindMap({ nodes, edges }) {
     </div>
   );
 }
+
