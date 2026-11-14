@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useMeetingProcessor } from './hooks/useMeetingProcessor.js';
 import { demoBatches } from './shared/demo.js';
-
+import MindMap from './components/MindMap.jsx';
 export function MeetingResults({ segments, isRecording, clearTranscript, children }) {
   const processor = useMeetingProcessor(segments, isRecording);
   const { state: { nodes, edges, actionItems }, error, isProcessing, processPending, reset } = processor;
@@ -18,6 +18,8 @@ export function MeetingResults({ segments, isRecording, clearTranscript, childre
       {error && <p role="alert">{error}</p>}
       <h2>Topics</h2>
       <ul>{nodes.map(node => <li key={node.id}><strong>{node.label}</strong> ({node.importance}/5) — {node.summary}</li>)}</ul>
+      <h2>Mind map</h2>
+      <MindMap nodes={nodes} edges={edges} />
       <h2>Connections</h2>
       <ul>{edges.map(edge => <li key={edge.id}>{nodes.find(node => node.id === edge.source)?.label} → {nodes.find(node => node.id === edge.target)?.label}</li>)}</ul>
       <h2>Action items</h2>
@@ -52,3 +54,4 @@ export default function App() {
     </main>
   );
 }
+
