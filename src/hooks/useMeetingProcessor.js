@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { processTranscript } from '../services/processTranscript.js';
 import { emptyMeetingState } from '../shared/meetingSchema.js';
 
-export function useMeetingProcessor(segments, isRecording, intervalMs = 20_000) {
+export function useMeetingProcessor(segments, isRecording, intervalMs = 10_000) {
   const [state, setState] = useState(emptyMeetingState);
   const [error, setError] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -43,8 +43,8 @@ export function useMeetingProcessor(segments, isRecording, intervalMs = 20_000) 
       }
     }
 
-    // Flush speech finalized during the in-flight request after recording stops.
-    if (succeeded && meeting.current === current && !latest.current.isRecording
+    // Process speech that arrived while the previous map update was running.
+    if (succeeded && meeting.current === current
         && latest.current.segments.length > end) await drain();
   }, []);
 
@@ -56,7 +56,7 @@ export function useMeetingProcessor(segments, isRecording, intervalMs = 20_000) 
   }, [isRecording, intervalMs, processPending]);
 
   useEffect(() => {
-    if (!isRecording) void processPending();
+    void processPending();
   }, [isRecording, segments.length, processPending]);
 
   const invalidate = useCallback(() => {
