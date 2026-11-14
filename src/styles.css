@@ -1,0 +1,114 @@
+/* Global Reset */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: #f9fafb; /* Soft off-white background */
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* General Container Styling */
+.app-container {
+    max-width: 800px; /* Limits width for better reading experience */
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+/* Typography and Spacing */
+h1, h2 {
+    color: #1f2937; /* Dark gray text color */
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+    font-weight: 600;
+}
+
+p {
+    line-height: 1.6;
+    color: #4b5563; /* Medium gray text */
+}
+
+/* Button Styling */
+button {
+    padding: 10px 20px;
+    font-size: 1em;
+    cursor: pointer;
+    border: none;
+    border-radius: 8px;
+    transition: background-color 0.2s, transform 0.1s;
+    margin-right: 10px; /* Spacing between buttons */
+}
+
+button[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Specific Button Styles for Roles */
+.btn-primary {
+    background-color: #3b82f6; /* Blue - Primary Action (Start) */
+    color: white;
+}
+.btn-primary:hover:not([disabled]) {
+    background-color: #2563eb;
+}
+
+.btn-secondary {
+    background-color: #ffc107; /* Yellow/Amber - Secondary Action (Stop) */
+    color: black;
+}
+.btn-secondary:hover:not([disabled]) {
+    background-color: #e0a800;
+}
+
+/* Container for Control Panel */
+.control-panel {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 15px;
+    align-items: center; /* Aligns buttons and indicator */
+}
+
+/* List Styling */
+ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 10px 0 20px 0;
+}
+li {
+    padding: 5px 0;
+    border-bottom: 1px solid #e5e7eb; /* Subtle divider */
+}
+li:last-child {
+    border-bottom: none;
+}
+
+/* Details/Summary Styling */
+details summary {
+    cursor: pointer;
+    font-weight: bold;
+    color: #3b82f6;
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(56, 161, 105, 0.7); }
+  50% { box-shadow: 0 0 12px rgba(56, 161, 105, 1); }
+}
+
+/* Add global styles for the activity indicator */
+.activity-indicator {
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background-color: #38a169; /* Green when active */
+    box-shadow: 0 0 8px rgba(56, 161, 105, 0.7);
+    animation: pulse 1s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(56, 161, 105, 0.7); }
+  50% { box-shadow: 0 0 12px rgba(56, 161, 105, 1); }
+}

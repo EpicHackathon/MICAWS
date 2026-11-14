@@ -164,12 +164,12 @@ export default function App() {
   }
 
   return (
-    <main style={{ maxWidth: '800px', margin: '2rem auto', padding: '0 1rem', fontFamily: 'system-ui' }}>
-      <h1 style={{ color: isRecording ? 'red' : '#333' }}>Meeting Processor Dashboard</h1>
+    <main className="app-container">
+      <h1 className="text-3xl font-bold" style={{ color: isRecording ? 'red' : '#333' }}>Meeting Processor Dashboard</h1>
       <p>Status: {isRecording ? '🔴 LIVE RECORDING IN PROGRESS...' : '🟢 Ready. Click Start to begin session capture.'}</p>
       
       {/* CONTROL PANEL */}
-      <div style={{ marginBottom: '20px', display: 'flex', gap: '15px', alignItems: 'center' }}>
+      <div className="control-panel">
         <button 
           onClick={startRecording} 
           disabled={isRecording}
