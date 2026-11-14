@@ -6,3 +6,11 @@ dist/
 __pycache__/
 *.pyc
 .env
+
+.venv*/
+venv/
+__pycache__/
+*.pyc
+*.m4a
+*.wav
+*.rttm
