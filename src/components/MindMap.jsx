@@ -10,6 +10,7 @@ import '@xyflow/react/dist/style.css';
   node.parentId === mainIdea?.id);
     const edges = allEdges.filter(edge => edge.source ===
   mainIdea?.id);
+  const positions = new Map();
   let nextColumn = 0;
   function place(node, depth) {
     const children = nodes.filter(child => child.parentId === node.id);
