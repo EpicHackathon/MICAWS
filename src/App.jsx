@@ -35,7 +35,7 @@ export function MeetingResults({ segments, isRecording, clearTranscript, childre
       <h2 style={{marginTop: '30px'}}>Mind Map</h2>
       {/* MindMap component visualization */}
       <div style={{height: '400px', border: '1px solid #eee'}}>
-        <MindMap nodes={nodes} edges={edges} />
+         <MindMap nodes={mockMeeting.nodes} edges={mockMeeting.edges} />
       </div>
 
       <h2 style={{marginTop: '30px'}}>Connections ({edges.length})</h2>
@@ -221,3 +221,4 @@ export default function App() {
     </main>
   );
 }
+
