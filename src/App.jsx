@@ -1,20 +1,24 @@
 import React, { useState } from 'react';
 import { useMeetingProcessor } from './hooks/useMeetingProcessor.js';
-import MindMap from './components/MindMap.jsx';
-import { mockMeeting } from './shared/mockMeeting.js';
+import MeetingView from './components/MeetingView.jsx';
+import ManualInput from './components/ManualInput.jsx';
 import { demoBatches } from './shared/demo.js';
 
 /**
  * MeetingResults component displays the derived state (Nodes, Edges, Actions) 
  * and controls for processing segments. It is now purely a display layer.
  */
-export function MeetingResults({ segments, isRecording, clearTranscript, children }) {
+export function MeetingResults({ segments, isRecording, clearTranscript, onManualSegment, children }) {
   // The hook handles state updates based on incoming segments
+  const [viewVersion, setViewVersion] = useState(0);
   const processor = useMeetingProcessor(segments, isRecording);
-  const { state: { nodes, edges, actionItems }, error, isProcessing, processPending, reset } = processor;
+  const { state, error, isProcessing, processPending, reset } = processor;
 
   function resetMeeting() {
-    if (clearTranscript() !== false) reset();
+    if (clearTranscript() !== false) {
+      reset();
+      setViewVersion(current => current + 1);
+    }
   }
 
   return (
@@ -27,27 +31,8 @@ export function MeetingResults({ segments, isRecording, clearTranscript, childre
 
       {error && <p role="alert" style={{ color: 'red', border: '1px solid red', padding: '10px' }}>Error: {error}</p>}
       
-      <h2 style={{marginTop: '30px'}}>Topics ({nodes.length})</h2>
-      <ul style={{listStyleType: 'none', padding: 0}}>
-        {nodes.map(node => <li key={node.id} style={{marginBottom: '5px'}}><strong style={{fontSize: '1.1em'}}>{node.label}</strong> ({node.importance}/5) — {node.summary}</li>)}
-      </ul>
-
-      <h2 style={{marginTop: '30px'}}>Mind Map</h2>
-      {/* MindMap component visualization */}
-      <div style={{height: '400px', border: '1px solid #eee'}}>
-         <MindMap nodes={mockMeeting.nodes} edges={mockMeeting.edges} />
-      </div>
-
-      <h2 style={{marginTop: '30px'}}>Connections ({edges.length})</h2>
-      <ul style={{listStyleType: 'none', padding: 0}}>
-        {edges.map(edge => <li key={edge.id}>🔗 {nodes.find(node => node.id === edge.source)?.label || '(Unknown)'} → {nodes.find(node => node.id === edge.target)?.label || '(Unknown)'}</li>)}
-      </ul>
-
-      <h2 style={{marginTop: '30px'}}>Action items ({actionItems.length})</h2>
-      <ul style={{listStyleType: 'disc', paddingLeft: '20px'}}>
-        {actionItems.map(item => <li key={item.id}>{item.text}</li>)}
-      </ul>
-      <details style={{marginTop: '40px'}}><summary>Meeting state JSON</summary><pre>{JSON.stringify(processor.state, null, 2)}</pre></details>
+      <MeetingView key={'view-' + viewVersion} state={state} />
+      <ManualInput key={'input-' + viewVersion} disabled={isRecording || isProcessing || !onManualSegment} onSubmit={onManualSegment} />
     </>
   );
 }
@@ -139,15 +124,6 @@ export default function App() {
   };
 
   /**
-   * Placeholder function to simulate a burst of data from the stream (for testing purposes).
-   */
-  const simulateSegment = () => {
-      if (!isRecording) return;
-      // Simulate diarization output: Speaker 'Alex' spoke for 2 seconds.
-      processLiveSegment({ time: Math.random() * 10, speaker: ['Alice', 'Bob', 'Charlie'][Math.floor(Math.random() * 3)], text: `Simulated speech chunk at ${Date.now()} focusing on the next steps.` });
-  }
-
-  /**
    * Clears state and resets the session.
    */
   const clearSession = () => {
@@ -164,12 +140,12 @@ export default function App() {
   }
 
   return (
-    <main style={{ maxWidth: '800px', margin: '2rem auto', padding: '0 1rem', fontFamily: 'system-ui' }}>
-      <h1 style={{ color: isRecording ? 'red' : '#333' }}>Meeting Processor Dashboard</h1>
+    <main className="app-container">
+      <h1 className="text-3xl font-bold" style={{ color: isRecording ? 'red' : '#333' }}>Meeting Processor Dashboard</h1>
       <p>Status: {isRecording ? '🔴 LIVE RECORDING IN PROGRESS...' : '🟢 Ready. Click Start to begin session capture.'}</p>
       
       {/* CONTROL PANEL */}
-      <div style={{ marginBottom: '20px', display: 'flex', gap: '15px', alignItems: 'center' }}>
+      <div className="control-panel">
         <button 
           onClick={startRecording} 
           disabled={isRecording}
@@ -192,6 +168,7 @@ export default function App() {
         segments={segments} 
         isRecording={isRecording} 
         clearTranscript={clearSession}
+        onManualSegment={segment => setSegments(current => [...current, segment])}
       >
         {({ isProcessing }) => (
           <>
@@ -211,14 +188,6 @@ export default function App() {
         )}
       </MeetingResults>
 
-      {/* DEBUGGING/MOCK INPUT FOR TESTING */}
-      <div style={{marginTop: '40px', borderTop: '1px dashed #ccc', paddingTop: '20px'}}>
-        <h3 style={{fontSize:'1.3em'}}>🛠️ Dev Tools (Test Input)</h3>
-        <p>Click this button repeatedly to simulate incoming, diarized audio chunks.</p>
-         <button onClick={simulateSegment} disabled={!isRecording}>Simulate Segment Chunk</button>
-      </div>
-
     </main>
   );
 }
-

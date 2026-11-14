@@ -41,7 +41,7 @@ npm test
 npm run dev
 ```
 
-In macOS/Linux use `cp .env.example .env.local`. On Windows, use `npm.cmd` if PowerShell blocks npm scripts. Open the localhost URL printed by Vite. Click **Send sample batch** three times, waiting for each update. Expand **Meeting state JSON** to see the full response. Mock mode matches the included sample phrases and timestamps. Other transcript text leaves the state unchanged. The mock does not contact Google.
+In macOS/Linux use `cp .env.example .env.local`. On Windows, use `npm.cmd` if PowerShell blocks npm scripts. Open the localhost URL printed by Vite. Click **Send sample batch** three times, waiting for each update. Expand **Meeting state JSON** to see the full response. Mock mode matches the included sample phrases and timestamps. Other transcript text appears as quoted test input in mock mode, without inferred tasks. The mock does not contact Google.
 
 | Batch | Expected state |
 | --- | --- |
@@ -136,3 +136,19 @@ Every non-root node has exactly one edge from its parent, with id "<parentId>-<c
 The map places the root above its main points and details. With MEETING_MOCK=true, use the three sample-batch buttons and expand Meeting state JSON to inspect parentId. Use Reset session to start again. Existing flat JSON without parentId is rejected; reset an older in-memory meeting and reprocess its transcript with the new schema.
 
 The original three sample batches keep their requested root/main-point structure. Automated tests also cover a third-level campaign detail. No actual meeting transcript or mockMeeting.js was supplied for an additional meeting fixture.
+
+## Inspect nodes and test typed text
+
+After sending a sample batch, click a map node to open its details. Use Show topic list for keyboard-friendly topic buttons, or Show mind map to return to the visualization. The details panel shows the summary, importance, parent, and direct children. Parent and child buttons navigate between details. Close node details dismisses the panel.
+
+Map connections come from parentId. Nodes and edges cannot be edited or reconnected in the visualization. Zoom, pan, and fit-view controls remain available.
+
+Action items are meeting-wide because the agreed task schema contains only id and text. The UI does not infer task-to-topic assignments.
+
+Expand Dev tools — test text, enter a statement, and choose Send test text. Blank submissions are disabled. Input enters the same queue as the sample transcript, and processing errors appear above the results. Use Process pending / retry after a failure. Reset session clears the queued text and the details panel.
+
+With MEETING_MOCK=true, arbitrary text appears verbatim as a quoted mock topic. This verifies the request and display flow without an API key. With MEETING_MOCK=false, Gemini analyzes the text using the configured server-side key. Sample batches and typed text can be used in the same mock session.
+
+The voice recording controls are an existing prototype and were excluded from this revision. Test this revision using the sample buttons and typed text.
+
+The automated UI test uses jsdom to exercise typed submission, a failed request and retry, view switching, details navigation, and reset confirmation. React Flow can emit layout/style warnings in this simulated environment because it does not calculate browser layout. Check the visual map in a browser when reviewing styling changes.

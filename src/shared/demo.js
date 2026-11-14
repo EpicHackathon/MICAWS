@@ -42,7 +42,9 @@ export function getDemoState(segments, previousState) {
   const latest = demoBatches.findLastIndex(batch => batch.some(example =>
     segments.some(segment => example.time === segment.time && example.text === segment.text),
   ));
-  if (latest < 0) return previousState;
+  if (latest < 0 || previousState.nodes.some(node => node.parentId === null && node.id !== 'launch')) {
+    return quoteMockInput(segments, previousState);
+  }
 
   // Replayed sample batches must not roll an already completed demo backward.
   const completed = demoStates.findLastIndex(state =>
@@ -57,9 +59,38 @@ export function getDemoState(segments, previousState) {
     }
     return [...items.values()];
   };
-  return {
+  const remaining = segments.filter(segment => !demoBatches.flat().some(example =>
+    example.time === segment.time && example.text === segment.text));
+  return quoteMockInput(remaining, {
     nodes: merge(previousState.nodes, sample.nodes, true),
     edges: merge(previousState.edges, sample.edges, false),
     actionItems: merge(previousState.actionItems, sample.actionItems, false),
-  };
+  });
+}
+
+// Arbitrary mock input is quoted verbatim, without inferred topics or tasks.
+function quoteMockInput(segments, previousState) {
+  const state = structuredClone(previousState);
+  const texts = segments.map(segment => segment.text.trim()).filter(Boolean);
+  if (!texts.length) return state;
+  if (!state.nodes.length) {
+    state.nodes.push({
+      id: 'mock-meeting', parentId: null, label: 'Mock Meeting',
+      summary: 'Quoted test input supplied to the mock processor.', importance: 5,
+    });
+  }
+  const root = state.nodes.find(node => node.parentId === null);
+  const ids = new Set(state.nodes.map(node => node.id));
+  const edgeIds = new Set(state.edges.map(edge => edge.id));
+  for (const text of texts) {
+    if (state.nodes.some(node => node.summary === text)) continue;
+    let number = state.nodes.length;
+    while (ids.has('mock-note-' + number) || edgeIds.has(root.id + '-mock-note-' + number)) number++;
+    const id = 'mock-note-' + number;
+    state.nodes.push({ id, parentId: root.id, label: 'Quoted Test Input', summary: text, importance: 3 });
+    state.edges.push({ id: root.id + '-' + id, source: root.id, target: id });
+    ids.add(id);
+    edgeIds.add(root.id + '-' + id);
+  }
+  return state;
 }

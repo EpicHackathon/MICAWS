@@ -38,7 +38,7 @@ const LINE_SIDES = {
   bubble: { source: 'bottom', target: 'top',  edgeType: 'straight' },  // bubble lines start from the center (see mindmap.css)
 };
 
-export default function MindMap({ nodes: allNodes, edges: allEdges }) {
+export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNodeId, onSelectNode }) {
   // focusId = the main point you clicked. null means "big picture".
   const [focusId, setFocusId] = useState(null);
   // mapStyle = 'tree', 'linear' or 'bubble'
@@ -102,6 +102,8 @@ export default function MindMap({ nodes: allNodes, edges: allEdges }) {
       position,
       data: { label },
       className: `shape-${level}${isFocus ? ' is-focus' : ''}`,   // <- picks the shape
+      selected: node.id === selectedNodeId,                         // Micah: highlight the box shown in the details panel
+      ariaLabel: node.label + ', importance ' + node.importance + ' out of 5. Select for details.',
       sourcePosition: sides.source,
       targetPosition: sides.target,
     };
@@ -110,7 +112,8 @@ export default function MindMap({ nodes: allNodes, edges: allEdges }) {
   // Click a main point -> zoom in on it.
   function handleNodeClick(event, node) {
     const clicked = allNodes.find(n => n.id === node.id);
-    if (clicked.parentId === mainIdea?.id) setFocusId(clicked.id);
+    onSelectNode?.(node.id);                                        // Micah: open the details panel
+    if (clicked.parentId === mainIdea?.id) setFocusId(clicked.id);   // zoom into main points
   }
 
   // Click empty space -> back to the big picture.
@@ -129,6 +132,8 @@ export default function MindMap({ nodes: allNodes, edges: allEdges }) {
         edges={edges}
         nodesDraggable={false}
         nodesConnectable={false}
+        edgesReconnectable={false}
+        deleteKeyCode={null}
         fitView
         defaultEdgeOptions={{ type: sides.edgeType }}
         onNodeClick={handleNodeClick}
@@ -149,7 +154,7 @@ export default function MindMap({ nodes: allNodes, edges: allEdges }) {
           </div>
         </Panel>
         <Background />
-        <Controls />
+        <Controls showInteractive={false} />
       </ReactFlow>
     </div>
   );

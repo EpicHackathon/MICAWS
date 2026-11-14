@@ -185,3 +185,39 @@ test('server rejects a valid tree that changes an existing parent', async () => 
   });
   assert.equal((await send(handler, demoBatches[2], previous)).status, 502);
 });
+
+test('manual text in mock mode produces a valid quoted topic without invented tasks', async () => {
+  const segments = [{ time: 0, speaker: null, text: 'We decided to launch next week' }];
+  const response = await send(mock, segments);
+  assert.equal(response.status, 200);
+  const state = await response.json();
+  assert.equal(meetingSchema.safeParse(state).success, true);
+  assert.ok(state.nodes.some(node => node.summary === segments[0].text));
+  assert.deepEqual(state.actionItems, []);
+  const retry = await send(mock, segments, state);
+  assert.deepEqual(await retry.json(), state);
+});
+
+test('manual text and sample batches can be mixed in either order', async () => {
+  const manual = [{ time: 0, speaker: null, text: 'Review our budget tomorrow.' }];
+  for (const batches of [[manual, demoBatches[0]], [demoBatches[0], manual]]) {
+    let state = emptyMeetingState;
+    for (const batch of batches) {
+      const response = await send(mock, batch, state);
+      assert.equal(response.status, 200);
+      const next = await response.json();
+      for (const node of state.nodes) assert.ok(next.nodes.some(item => item.id === node.id && item.parentId === node.parentId));
+      state = next;
+    }
+    assert.ok(state.nodes.some(node => node.summary === manual[0].text));
+  }
+});
+
+test('a combined mock request keeps both sample and arbitrary text', async () => {
+  const text = 'The budget needs review.';
+  const response = await send(mock, [...demoBatches[0], { time: 0, speaker: null, text }]);
+  assert.equal(response.status, 200);
+  const state = await response.json();
+  assert.ok(state.nodes.some(node => node.id === 'launch'));
+  assert.ok(state.nodes.some(node => node.summary === text));
+});
