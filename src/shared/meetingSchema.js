@@ -49,8 +49,8 @@ export const meetingSchema = stateShape.superRefine((state, ctx) => {
       }
       seen.add(parent.id);
       depth += 1;
-      if (depth > 3) {
-        issue(['nodes', index, 'parentId'], 'Tree exceeds three levels');
+      if (depth > 5) {
+        issue(['nodes', index, 'parentId'], 'Tree exceeds five levels');
         break;
       }
       current = parent;

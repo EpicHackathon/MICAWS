@@ -122,10 +122,28 @@ const detailState = () => {
   return state;
 };
 
-test('hierarchy accepts empty, root-only and three-level states', () => {
-  for (const state of [emptyMeetingState, ...demoStates, detailState()]) {
+// Adds a chain of `count` nodes below campaign-detail (level 3), e.g. count 2 -> levels 4 and 5.
+const addChain = (state, count) => {
+  let parent = 'campaign-detail';
+  for (let i = 1; i <= count; i += 1) {
+    const id = 'deep-' + i;
+    state.nodes.push({ id, label: 'Deeper ' + i, summary: 'A deeper sub-detail.', importance: 2, parentId: parent });
+    state.edges.push({ id: parent + '-' + id, source: parent, target: id });
+    parent = id;
+  }
+  return state;
+};
+
+test('hierarchy accepts empty, root-only, three-, four- and five-level states', () => {
+  for (const state of [emptyMeetingState, ...demoStates, detailState(), addChain(detailState(), 1), addChain(detailState(), 2)]) {
     assert.equal(meetingSchema.safeParse(state).success, true);
   }
+});
+
+test('hierarchy rejects a sixth level with a clear message', () => {
+  const result = meetingSchema.safeParse(addChain(detailState(), 3));
+  assert.equal(result.success, false);
+  assert.ok(result.error.issues.some(issue => issue.message === 'Tree exceeds five levels'));
 });
 
 test('hierarchy rejects roots, orphans, cycles, deep nesting and incorrect importance', () => {
@@ -137,10 +155,7 @@ test('hierarchy rejects roots, orphans, cycles, deep nesting and incorrect impor
     state => { state.nodes[0].importance = 4; },
     state => { state.nodes[1].importance = 5; },
     state => { delete state.nodes[1].parentId; },
-    state => {
-      state.nodes.push({ id: 'deep', label: 'Deep', summary: 'Too deep.', importance: 2, parentId: 'campaign-detail' });
-      state.edges.push({ id: 'campaign-detail-deep', source: 'campaign-detail', target: 'deep' });
-    },
+    state => { addChain(state, 3); },   // six levels: too deep
   ];
   for (const change of changes) {
     const state = detailState();
