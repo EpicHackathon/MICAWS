@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ReactFlow, Background, Controls, Panel } from '@xyflow/react';
+import { ReactFlow, Background, Controls, Panel, useReactFlow } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './mindmap.css';
 import { moveNode, editNode, deleteNode, subtreeIds } from '../shared/mapEdits.js';
@@ -172,6 +172,19 @@ function layout(mapStyle, root, kidsOf, size, compact = false) {
   return pos;
 }
 
+// Re-centers the map whenever the tree's shape changes (an edit, or the AI adding topics),
+// so boxes never end up off-screen. Lives inside <ReactFlow> so it can use useReactFlow.
+function AutoFit({ shape }) {
+  const { fitView } = useReactFlow();
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) { first.current = false; return; }   // the first fit is done by `fitView`
+    const frame = requestAnimationFrame(() => fitView({ maxZoom: 1, duration: 300 }));
+    return () => cancelAnimationFrame(frame);
+  }, [shape, fitView]);
+  return null;
+}
+
 export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNodeId, onSelectNode, live = true, onEdit }) {
   // focusId = the main point you clicked. null means "big picture".
   const [focusId, setFocusId] = useState(null);
@@ -188,15 +201,19 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
   const [dragPos, setDragPos] = useState(null);           // { id, x, y } while dragging
   const [dropTargetId, setDropTargetId] = useState(null); // box you'd drop onto
   const [editMessage, setEditMessage] = useState(null);   // "can't do that" messages
+  const [measured, setMeasured] = useState({});            // id -> size React Flow measured
+  const [editNotice, setEditNotice] = useState(null);     // "Moved X inside Y" messages
 
   // Run an edit (a function from src/shared/mapEdits.js). Shows a message if it's refused.
   function tryEdit(edit) {
     try {
       onEdit(edit);
       setEditMessage(null);
+      setEditNotice(null);
       return true;
     } catch (error) {
       setEditMessage(error.message);
+      setEditNotice(null);
       return false;
     }
   }
@@ -309,6 +326,22 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
   }
 
   function handleNodesChange(changes) {
+    // React Flow measures every box and reports the size here. We MUST keep those sizes and
+    // hand them back on each render, or React Flow treats boxes as size-less and hides them.
+    const sizes = changes.filter(change => change.type === 'dimensions' && change.dimensions);
+    if (sizes.length) {
+      setMeasured(current => {
+        let next = current;
+        for (const { id, dimensions } of sizes) {
+          const old = current[id];
+          if (!old || old.width !== dimensions.width || old.height !== dimensions.height) {
+            if (next === current) next = { ...current };
+            next[id] = { width: dimensions.width, height: dimensions.height };
+          }
+        }
+        return next;
+      });
+    }
     if (!editMode) return;
     for (const change of changes) {
       if (change.type === 'position' && change.dragging && change.position) {
@@ -318,15 +351,26 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
     }
   }
 
+  // Move a box inside another and say where it went (it may now be hidden inside that box).
+  function moveInto(id, newParentId) {
+    const moved = allNodes.find(n => n.id === id);
+    const parent = allNodes.find(n => n.id === newParentId);
+    if (!moved || !parent || moved.parentId === newParentId) return;
+    if (tryEdit(state => moveNode(state, id, newParentId))) {
+      const hidden = !fullView && newParentId !== top;
+      setEditNotice(`Moved “${moved.label}” inside “${parent.label}”.` + (hidden ? ` Open “${parent.label}” to see it.` : ''));
+    }
+  }
+
   function handleNodeDragStop(event, node) {
-    if (dropTargetId) tryEdit(state => moveNode(state, node.id, dropTargetId));
+    if (dropTargetId) moveInto(node.id, dropTargetId);
     setDragPos(null);
     setDropTargetId(null);
   }
 
   // Connect the dots: drag from box A's dot to box B's dot -> B goes inside A.
   function handleConnect({ source, target }) {
-    if (source && target) tryEdit(state => moveNode(state, target, source));
+    if (source && target) moveInto(target, source);
   }
 
   function openEditor(node) {
@@ -365,6 +409,7 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
     return {
       id: node.id,
       position: dragging ? { x: dragPos.x, y: dragPos.y } : (positions.get(node.id) ?? { x: 0, y: 0 }),
+      measured: measured[node.id],   // size React Flow measured (see handleNodesChange)
       data: { label },
       className: `shape-${level}${isFocus ? ' is-focus' : ''}${hasUnread ? ' has-unread' : ''}${clickable && level === 'detail' ? ' has-kids' : ''}`
         + `${node.id === dropTargetId ? ' drop-target' : ''}${editMode && node.id === editingId ? ' edit-selected' : ''}`,   // <- picks the shape
@@ -454,12 +499,15 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
         onNodeClick={handleNodeClick}
         onPaneClick={handlePaneClick}
       >
+        <AutoFit shape={mapStyle + '|' + (fullView ? 'all' : top) + '|' + allNodes.map(n => n.id + ':' + n.parentId).join(',')} />
         {editMode && (
-          <Panel position="top-center">
+          <Panel position="bottom-center">
             <div className="edit-hint" role="status">
               {editMessage
                 ? <span className="edit-error">{editMessage}</span>
-                : 'Drag a box onto another to put it inside · Drag dot to dot to connect · Click a box to rename or delete'}
+                : editNotice
+                  ? editNotice
+                  : 'Drag a box onto another to move it inside · Click a box to rename or delete'}
             </div>
           </Panel>
         )}

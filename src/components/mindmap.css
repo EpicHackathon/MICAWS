@@ -319,7 +319,7 @@
 }
 
 .edit-hint {
-  max-width: min(70vw, 560px);
+  max-width: min(60vw, 460px);
   padding: 7px 14px;
   border-radius: 10px;
   background: var(--switch-active);
