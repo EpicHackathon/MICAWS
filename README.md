@@ -69,7 +69,7 @@ Open `.env.local` in VS Code and set `MEETING_MOCK=true` for the sample demo. Sa
 1. Create a Gemini API key in [Google AI Studio](https://aistudio.google.com/app/apikey).
 2. Edit .env.local. Set `MEETING_MOCK=false` and paste the key as `GEMINI_API_KEY=your_actual_key`. Keep it out of Git and never put it in a `VITE_` environment variable.
 3. Restart `npm run dev`. Repeat the demo or endpoint test. Live wording and IDs may differ from the fixture. Existing IDs should remain stable within the meeting.
-4. The default `GEMINI_MODEL=gemini-3.5-flash-lite` supports structured output and has listed free-tier pricing. Check model availability and project quotas before the demo. Keep your Google project on the free tier if you need to avoid charges. [Model details](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite) · [Pricing](https://ai.google.dev/gemini-api/docs/pricing)
+4. The default `GEMINI_MODEL=gemini-3.5-flash-lite` supports structured output. Optional `GEMINI_MODELS=gemini-2.5-flash,gemini-2.5-flash-lite` adds ordered quota fallbacks; choose models enabled for your API key. A model that returns HTTP 429 is skipped for 60 seconds (configurable with `GEMINI_QUOTA_COOLDOWN_MS`). If all are limited, the request stays available for retry. Shared quotas can affect every model. Check current model availability and pricing before use. [Models](https://ai.google.dev/gemini-api/docs/models) · [Pricing](https://ai.google.dev/gemini-api/docs/pricing)
 
 ## Integrate in your team app
 
