@@ -7,6 +7,7 @@ export default defineConfig(({ mode }) => {
   return {
     optimizeDeps: { entries: ['index.html'] },
     server: {
+      allowedHosts: ['micaws.us'],
       watch: { ignored: ['**/.venv*/**', '**/.cache/**'] },
       proxy: {
         '/api/transcribe': {
