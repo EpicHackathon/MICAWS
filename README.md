@@ -182,3 +182,26 @@ Run `npm.cmd test` to exercise recording without a real microphone, audio file, 
 The recording integration test mounts the actual App and microphone hook. It verifies start/stop controls, timestamp conversion, accumulation across recordings, transcription and processing retries, and reset while transcription is pending. Lower-level tests cover WAV chunks, permission denial, unsupported APIs, worklet startup failure, delayed microphone permission, malformed responses, and stop timeouts.
 
 If the audio worklet cannot acknowledge stop within five seconds, capture resources are released and a visible message explains that the final chunk could not be recovered. Previously queued audio can still complete or be retried. These automated checks validate lifecycle and data flow; actual recognition accuracy and microphone hardware still require a live test.
+
+## Python version for local development
+
+Use Python 3.11 for local Windows development. WhisperX currently requires Python >=3.10 and <3.14, so Python 3.14 cannot install the current release. The repository's diart Docker image uses its own Python 3.10 runtime, independently of Windows.
+
+Keep WhisperX and diart in separate environments. diart 0.9.2 requires NumPy below 2, while current WhisperX requires NumPy 2.1 or newer. Installing both into one environment creates conflicting requirements. The diart Dockerfile also pins a different PyTorch stack.
+
+On Windows, explicitly select the installed interpreter:
+
+```powershell
+py -3.11 --version
+py -3.11 -m venv .venv-whisperx
+..venv-whisperxScriptspython.exe -m pip install -r backend/requirements.txt
+..venv-whisperxScriptspython.exe -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
+```
+
+WhisperX also requires FFmpeg available on PATH and downloads model files when first used. In VS Code, run **Python: Select Interpreter** from the Command Palette and select .venv-whisperx/Scripts/python.exe.
+
+Use the existing Dockerfile.diart for the separate diarization environment. If developing diart directly on Windows, create .venv-diart with `py -3.11 -m venv .venv-diart` and install its own compatible dependency stack there.
+
+The .python-version file records the project choice for tools that support it. The Windows launcher still needs `py -3.11` to select this version explicitly.
+
+Sources: [WhisperX package](https://pypi.org/project/whisperx/), [WhisperX dependency metadata](https://github.com/m-bain/whisperX/blob/main/pyproject.toml), [diart 0.9.2 dependencies](https://github.com/juanmc2005/diart/blob/v0.9.2/setup.cfg).
