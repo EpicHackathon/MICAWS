@@ -8,7 +8,7 @@ export default function MeetingView({ state: liveState }) {
   // Dev helper: show the sample hackathon meeting instead of the live one.
   const [showSample, setShowSample] = useState(false);
   const state = showSample ? mockMeeting : liveState;
-  const { nodes, edges, actionItems } = state;
+  const { nodes = [], edges = [], actionItems = [] } = state || {};
   const selected = nodes.find(node => node.id === selectedNodeId);
   const parent = selected && nodes.find(node => node.id === selected.parentId);
   const children = selected ? nodes.filter(node => node.parentId === selected.id) : [];
@@ -48,30 +48,11 @@ export default function MeetingView({ state: liveState }) {
              <h3>Transcript Stream</h3>
              {/* This area will now be constrained by the sidebar layout and should contain the transcript component. */}
              <div className="live-transcript-box" style={{ minHeight: '100%' }}>
-                <!-- Actual transcript rendering logic goes here -->
+                {/* Actual transcript rendering logic goes here */}
                 <p>Live Transcript Feed...</p>
              </div>
         </aside>
     </div>
-        {!nodes.length ? <p>No topics yet. Send a sample batch or enter test text below.</p> :
-          showMap ? (
-            <div className="mindmap-frame">
-              <MindMap nodes={nodes} edges={edges} selectedNodeId={selectedNodeId}
-                onSelectNode={setSelectedNodeId} live={!showSample} />
-            </div>
-          ) : (
-            <ul>
-              {nodes.map(node => (
-                <li key={node.id}>
-                  <button type="button" onClick={() => setSelectedNodeId(node.id)}
-                    aria-pressed={selectedNodeId === node.id}>
-                    {node.label} ({node.importance}/5)
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-      </div>
       {selected && (
         <section aria-label="Node details" aria-live="polite" className="node-details-panel">
           <button type="button" onClick={() => setSelectedNodeId(null)}>Close node details</button>
