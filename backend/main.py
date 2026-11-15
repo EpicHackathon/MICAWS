@@ -14,7 +14,7 @@ logger = logging.getLogger("uvicorn.error")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Loading WhisperX")
+    logger.info("Loading WhisperX; the first startup downloads model files. Wait for Application startup complete before recording.")
     app.state.transcriber = Transcriber()
     try:
         yield
@@ -23,6 +23,11 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="MICAWS Transcription API", lifespan=lifespan)
+
+
+@app.get("/api/transcribe/health")
+def transcription_health():
+    return {"status": "ready"}
 
 
 @app.post("/api/transcribe")

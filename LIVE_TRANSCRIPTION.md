@@ -57,3 +57,29 @@ For your own speech to change the map, your existing `.env.local` needs `MEETING
 - Transcript recognition remains on your Python server. With live mind-map processing enabled, transcript text is sent to Gemini by the existing API.
 
 Validation: automated tests cover capture chunking and upload behavior using simulated audio and server replies, plus the existing processing API tests. The production build was checked. Real microphone input, CPU transcription latency, and Gemini responses must be checked on your computer using the steps above.
+
+## Start continuous transcription on Windows
+
+Use two terminals in the MICAWS folder. The frontend alone cannot transcribe audio.
+
+First-time setup:
+
+```powershell
+py -3.11 -m venv .venv-whisperx
+.\.venv-whisperx\Scripts\python.exe -m pip install -r backend/requirements.txt
+winget install --id Gyan.FFmpeg --exact
+```
+
+Terminal 1:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/start-transcription.ps1
+```
+
+Wait for **Application startup complete**. The first startup downloads the WhisperX model; keep this terminal open. Terminal 2 runs `npm.cmd run dev`. Check readiness through the frontend at http://localhost:5173/api/transcribe/health. A ready server returns {"status":"ready"}.
+
+The default backend address is http://127.0.0.1:8000. Set TRANSCRIPTION_URL in .env.local if your backend runs elsewhere, then restart Vite. In WSL, use an address reachable from the environment running Vite. The Docker frontend uses http://transcription:8000, the Compose service name.
+
+For Docker, run `docker compose up --build frontend transcription`. The transcription container has its own Python environment and model cache. Watch its startup logs before recording. The diart import-check container is separate from WhisperX.
+
+If the backend is unavailable or still loading, the frontend returns an explicit 503 error. If model loading fails, inspect Terminal 1 for the underlying dependency, FFmpeg, network, or model-download error. After recovery, use **Process pending / retry** to resend retained chunks. Reset or refresh discards retained audio.

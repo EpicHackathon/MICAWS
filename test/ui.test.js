@@ -33,6 +33,7 @@ test('typed input, details navigation, view toggle and reset work through the ap
     return handler(new Request('http://localhost' + url, options));
   });
   const server = await createServer({ server: { middlewareMode: true, ws: false }, appType: 'custom' });
+  t.after(() => server.close());
   const { createRoot } = await import('react-dom/client');
   const { default: App } = await server.ssrLoadModule('/src/App.jsx');
   const root = createRoot(document.getElementById('root'));
