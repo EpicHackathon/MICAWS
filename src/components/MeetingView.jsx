@@ -28,7 +28,7 @@ export default function MeetingView({ state: liveState }) {
             {!nodes.length ? <p>No topics yet. Send a sample batch or enter test text below.</p> : (
                 showMap ? (
                     <div className="mindmap-frame">
-                        <MindMap nodes={nodes} edges={edges} selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} />
+                        <MindMap nodes={nodes} edges={edges} selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} live={!showSample} />
                     </div>
                 ) : (
                     <ul className="topic-list">

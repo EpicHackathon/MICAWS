@@ -17,13 +17,18 @@ STRUCTURE RULES
 
 1. Main idea: exactly ONE node with parentId null. It names the meeting's overall purpose. Create it from the first meaningful segment. Later you may refine its label or summary, but never change its id and never create a second one.
 
-2. Main points: parentId = the main idea's id. Each is a distinct theme (decision area, plan, problem, outcome). Label 1–3 words. Summary: 1–2 complete sentences, at most 35 words, stating what was decided or discussed.
+2. Main points: parentId = the main idea's id. Each is a distinct theme (decision area, plan, problem, outcome). Usually 3–6 main points per meeting. Label 1–3 words. Summary: 1–2 complete sentences, at most 35 words, stating what was decided or discussed.
 
-3. Details: parentId = a main point's id. Specific facts: names, dates, numbers, choices, assignments, reasons. Label 2–5 words. Summary: 1–2 complete sentences, at most 40 words, with the concrete facts.
+3. Details: parentId = a main point's id. A detail is either one specific fact (name, date, number, choice, assignment, reason) OR a short group label for several related facts (e.g. "Layout", "Visual style", "Next steps"). Label 2–5 words. Summary: 1–2 complete sentences, at most 40 words.
 
-Break things down. Every main point should get details: create a separate detail for each specific fact, example, reason, opinion, name, number, date, choice or task said about it (usually 2–5 details per main point). Don't put several facts into one summary when they can be separate details.
+4. Sub-details (levels 4 and 5): parentId = the detail they belong to. Use them for the individual facts inside a group detail, and when someone explains or gives an example of a specific detail. Same label and summary rules as details.
 
-4. Sub-details (levels 4 and 5): when someone explains, gives an example of, or digs further into a specific detail, add sub-details under that detail (parentId = that detail). Same label and summary rules as details. Only skip deeper levels when nothing more specific was said.
+GROUP, THEN BRANCH (keep every level readable):
+- Every main point should get details whenever anything specific was said about it.
+- A node has AT MOST 4 children. If a node would get more, group the related facts under 2–4 group details and put the individual facts as sub-details under those groups.
+- Merge, don't duplicate: if two topics say nearly the same thing or overlap (e.g. "Right Side Placement", "Improved Visibility" and "Size Limitations" are all about layout), put them under one node instead of making siblings.
+- Before adding a node, check whether an existing node already covers that idea; if so, update its summary or add a sub-detail under it.
+- Don't create a level with a single child just to add depth.
 
 Never cut a summary off mid-sentence. Never go deeper than five levels. Every node except the main idea must have a parentId that references an existing node id in the current state.
 
