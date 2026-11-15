@@ -2,12 +2,19 @@ import React, { useState } from 'react';
 import MindMap from './MindMap.jsx';
 import { mockMeeting } from '../shared/mockMeeting.js';
 
-export default function MeetingView({ state: liveState }) {
+export default function MeetingView({ state: liveState, onEdit: onLiveEdit }) {
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [showMap, setShowMap] = useState(true);
   // Dev helper: show the sample hackathon meeting instead of the live one.
   const [showSample, setShowSample] = useState(false);
-  const state = showSample ? mockMeeting : liveState;
+  // The sample gets its own editable copy so people can practice moving/editing.
+  const [sampleState, setSampleState] = useState(mockMeeting);
+  const state = showSample ? sampleState : liveState;
+  // Hand edits from the map: the sample edits its copy; the live meeting goes through
+  // the meeting processor so the AI keeps the edits on its next update.
+  const onEdit = showSample
+    ? edit => setSampleState(edit(sampleState))   // run now so a refused edit throws to the map
+    : onLiveEdit;
   const { nodes = [], edges = [], actionItems = [] } = state || {};
   const selected = nodes.find(node => node.id === selectedNodeId);
   const parent = selected && nodes.find(node => node.id === selected.parentId);
@@ -28,7 +35,7 @@ export default function MeetingView({ state: liveState }) {
             {!nodes.length ? <p>No topics yet. Send a sample batch or enter test text below.</p> : (
                 showMap ? (
                     <div className="mindmap-frame">
-                        <MindMap nodes={nodes} edges={edges} selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} live={!showSample} />
+                        <MindMap nodes={nodes} edges={edges} selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} live={!showSample} onEdit={onEdit} />
                     </div>
                 ) : (
                     <ul className="topic-list">

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ReactFlow, Background, Controls, Panel } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './mindmap.css';
+import { moveNode, editNode, deleteNode, subtreeIds } from '../shared/mapEdits.js';
 
 // Box sizes, matching mindmap.css. (Zoomed-in main point is 280 wide.)
 const BOX_WIDTH = { main: 240, point: 170, detail: 196 };
@@ -48,8 +49,41 @@ const LINE_SIDES = {
   size     = id -> { width, height }
   Returns  Map id -> { x, y }
 */
-function layout(mapStyle, root, kidsOf, size) {
+function layout(mapStyle, root, kidsOf, size, compact = false) {
   const pos = new Map();
+
+  if (mapStyle === 'tree' && compact) {
+    // OUTLINE TREE (Show all): narrow and tall instead of wide.
+    // Main idea on top, its children in one row, and everything under each child
+    // stacked DOWNWARD in that child's column, indented one step per level.
+    const OUTLINE_INDENT = 28, OUTLINE_GAP = 14, COLUMN_GAP = 40;
+    const points = kidsOf(root.id);
+    const columnWidth = id => {
+      let widest = size.get(id).width;
+      (function walk(nodeId, d) {
+        kidsOf(nodeId).forEach(k => { widest = Math.max(widest, d * OUTLINE_INDENT + size.get(k.id).width); walk(k.id, d + 1); });
+      })(id, 1);
+      return widest;
+    };
+    const rowTop = size.get(root.id).height + LEVEL_GAP;
+    let left = 0;
+    points.forEach(point => {
+      pos.set(point.id, { x: left, y: rowTop });
+      let y = rowTop + size.get(point.id).height + OUTLINE_GAP;
+      (function stackDown(parentId, d) {
+        kidsOf(parentId).forEach(kid => {
+          pos.set(kid.id, { x: left + d * OUTLINE_INDENT, y });
+          y += size.get(kid.id).height + OUTLINE_GAP;
+          stackDown(kid.id, d + 1);
+        });
+      })(point.id, 1);
+      left += columnWidth(point.id) + COLUMN_GAP;
+    });
+    const rowWidth = Math.max(0, left - COLUMN_GAP);
+    pos.set(root.id, { x: rowWidth / 2 - size.get(root.id).width / 2, y: 0 });
+    return pos;
+  }
+
   const depthOf = new Map();
   const byDepth = [];   // byDepth[d] = boxes on level d
   (function walk(node, d) {
@@ -138,13 +172,34 @@ function layout(mapStyle, root, kidsOf, size) {
   return pos;
 }
 
-export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNodeId, onSelectNode, live = true }) {
+export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNodeId, onSelectNode, live = true, onEdit }) {
   // focusId = the main point you clicked. null means "big picture".
   const [focusId, setFocusId] = useState(null);
   // mapStyle = 'tree', 'linear' or 'bubble'
   const [mapStyle, setMapStyle] = useState('tree');
   // showAll = full detail view: every level at once
   const [showAll, setShowAll] = useState(false);
+
+  // EDIT MODE: drag boxes onto other boxes, connect dots, rename, delete.
+  const [editMode, setEditMode] = useState(false);
+  const [editingId, setEditingId] = useState(null);      // box open in the edit panel
+  const [draft, setDraft] = useState({ label: '', summary: '' });
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [dragPos, setDragPos] = useState(null);           // { id, x, y } while dragging
+  const [dropTargetId, setDropTargetId] = useState(null); // box you'd drop onto
+  const [editMessage, setEditMessage] = useState(null);   // "can't do that" messages
+
+  // Run an edit (a function from src/shared/mapEdits.js). Shows a message if it's refused.
+  function tryEdit(edit) {
+    try {
+      onEdit(edit);
+      setEditMessage(null);
+      return true;
+    } catch (error) {
+      setEditMessage(error.message);
+      return false;
+    }
+  }
 
   // UNREAD DOTS: ids of MAIN POINTS that got new info (live) nobody has looked at yet.
   // Only main points (the rounded rectangles) ever get a dot.
@@ -221,9 +276,67 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
   }));
   const kidsOf = id => nodes.filter(node => node.parentId === id);
   const root = nodes.find(node => node.id === top);
-  const positions = root ? layout(mapStyle, root, kidsOf, size) : new Map();
+  // Show all + Tree uses the narrow "outline" layout (details stack downward under each point).
+  const compact = mapStyle === 'tree' && fullView;
+  const positions = root ? layout(mapStyle, root, kidsOf, size, compact) : new Map();
 
   const sides = LINE_SIDES[mapStyle];
+  // Which sides the lines attach to. Outline tree: main idea -> points from the top,
+  // then everything below hangs off the LEFT side like an indented list.
+  const sidesFor = node => {
+    if (!compact) return sides;
+    if (node.parentId === null) return { source: 'bottom', target: 'top' };
+    if (node.parentId === mainIdea?.id) return { source: 'left', target: 'top' };
+    return { source: 'left', target: 'left' };
+  };
+
+  // While dragging in edit mode: which box is under the middle of the dragged box?
+  function findDropTarget(dragId, x, y) {
+    const { width, height } = size.get(dragId);
+    const cx = x + width / 2, cy = y + height / 2;
+    const ownBranch = new Set([dragId]);
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (const n of allNodes) if (n.parentId && ownBranch.has(n.parentId) && !ownBranch.has(n.id)) { ownBranch.add(n.id); grew = true; }
+    }
+    for (const n of nodes) {
+      if (ownBranch.has(n.id)) continue;
+      const p = positions.get(n.id), s = size.get(n.id);
+      if (p && cx >= p.x && cx <= p.x + s.width && cy >= p.y && cy <= p.y + s.height) return n.id;
+    }
+    return null;
+  }
+
+  function handleNodesChange(changes) {
+    if (!editMode) return;
+    for (const change of changes) {
+      if (change.type === 'position' && change.dragging && change.position) {
+        setDragPos({ id: change.id, ...change.position });
+        setDropTargetId(findDropTarget(change.id, change.position.x, change.position.y));
+      }
+    }
+  }
+
+  function handleNodeDragStop(event, node) {
+    if (dropTargetId) tryEdit(state => moveNode(state, node.id, dropTargetId));
+    setDragPos(null);
+    setDropTargetId(null);
+  }
+
+  // Connect the dots: drag from box A's dot to box B's dot -> B goes inside A.
+  function handleConnect({ source, target }) {
+    if (source && target) tryEdit(state => moveNode(state, target, source));
+  }
+
+  function openEditor(node) {
+    setEditingId(node.id);
+    setDraft({ label: node.label, summary: node.summary });
+    setConfirmDelete(false);
+    setEditMessage(null);
+  }
+  const editingNode = editMode ? allNodes.find(node => node.id === editingId) : null;
+  const editingBranchSize = editingNode ? subtreeIds({ nodes: allNodes }, editingNode.id).size - 1 : 0;
 
   const flowNodes = nodes.map(node => {
     const level = getLevel(node, mainIdea);
@@ -246,15 +359,21 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
     const hasUnread = level === 'point' && !isFocus && unread.has(node.id);
     const clickable = !isFocus && hasKids(node.id) && level !== 'main';
 
+    const dragging = dragPos?.id === node.id;
+    const lineSides = sidesFor(node);
+
     return {
       id: node.id,
-      position: positions.get(node.id) ?? { x: 0, y: 0 },
+      position: dragging ? { x: dragPos.x, y: dragPos.y } : (positions.get(node.id) ?? { x: 0, y: 0 }),
       data: { label },
-      className: `shape-${level}${isFocus ? ' is-focus' : ''}${hasUnread ? ' has-unread' : ''}${clickable && level === 'detail' ? ' has-kids' : ''}`,   // <- picks the shape
+      className: `shape-${level}${isFocus ? ' is-focus' : ''}${hasUnread ? ' has-unread' : ''}${clickable && level === 'detail' ? ' has-kids' : ''}`
+        + `${node.id === dropTargetId ? ' drop-target' : ''}${editMode && node.id === editingId ? ' edit-selected' : ''}`,   // <- picks the shape
       selected: node.id === selectedNodeId,                         // Micah: highlight the box shown in the details panel
-      ariaLabel: node.label + (hasUnread ? ', has new updates' : '') + ', importance ' + node.importance + ' out of 5. Select for details.',
-      sourcePosition: sides.source,
-      targetPosition: sides.target,
+      draggable: editMode && level !== 'main',                      // the main idea stays put
+      ariaLabel: node.label + (hasUnread ? ', has new updates' : '') + ', importance ' + node.importance + ' out of 5.'
+        + (editMode ? ' Edit mode: select to rename or delete.' : ' Select to open.'),
+      sourcePosition: lineSides.source,
+      targetPosition: lineSides.target,
     };
   });
 
@@ -262,6 +381,7 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
   // Keep clicking to keep going deeper. Works from the Show all view too.
   function handleNodeClick(event, node) {
     const clicked = allNodes.find(n => n.id === node.id);
+    if (editMode) { openEditor(clicked); return; }   // edit mode: click = open the edit panel
     // Micah's details panel still opens from the topic list view.
     // Main points ALWAYS open (even with no details yet: you still see their summary card).
     // Deeper boxes open when they have their own sub-details.
@@ -282,8 +402,18 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
   }
 
   // Click empty space -> up one level (does nothing in the big picture / Show all).
+  // In edit mode it just closes the edit panel.
   function handlePaneClick() {
+    if (editMode) { setEditingId(null); return; }
     goUp();
+  }
+
+  function toggleEditMode() {
+    setEditMode(current => !current);
+    setEditingId(null);
+    setEditMessage(null);
+    setDragPos(null);
+    setDropTargetId(null);
   }
 
   // Path from the main idea down to where you are, e.g. "Hackathon Plan › Tech Stack › OpenAI"
@@ -303,24 +433,88 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
 
   return (
     <div
-      className={`mindmap mindmap-${mapStyle}`}
+      className={`mindmap mindmap-${mapStyle}${compact ? ' mindmap-outline' : ''}${editMode ? ' editing' : ''}`}
       /* size, border and colors come from mindmap.css (theme-aware) */
     >
       <ReactFlow
         key={mapStyle + '|' + (fullView ? 'all|' : '') + nodes.map(node => node.id).join('|')}
         nodes={flowNodes}
         edges={edges}
-        nodesDraggable={false}
-        nodesConnectable={false}
+        nodesDraggable={editMode}
+        nodesConnectable={editMode}
         edgesReconnectable={false}
         deleteKeyCode={null}
         fitView
         fitViewOptions={{ maxZoom: 1 }}
         minZoom={0.1}
         defaultEdgeOptions={{ type: sides.edgeType }}
+        onNodesChange={handleNodesChange}
+        onNodeDragStop={handleNodeDragStop}
+        onConnect={handleConnect}
         onNodeClick={handleNodeClick}
         onPaneClick={handlePaneClick}
       >
+        {editMode && (
+          <Panel position="top-center">
+            <div className="edit-hint" role="status">
+              {editMessage
+                ? <span className="edit-error">{editMessage}</span>
+                : 'Drag a box onto another to put it inside · Drag dot to dot to connect · Click a box to rename or delete'}
+            </div>
+          </Panel>
+        )}
+        {editingNode && (
+          <Panel position="bottom-right">
+            <form
+              className="edit-panel nodrag nopan nowheel"
+              aria-label={'Edit ' + editingNode.label}
+              onSubmit={event => {
+                event.preventDefault();
+                tryEdit(state => editNode(state, editingNode.id, draft));
+              }}
+            >
+              <label htmlFor="edit-node-title">Title</label>
+              <input
+                id="edit-node-title"
+                value={draft.label}
+                onChange={event => setDraft(current => ({ ...current, label: event.target.value }))}
+              />
+              <label htmlFor="edit-node-summary">Summary</label>
+              <textarea
+                id="edit-node-summary"
+                rows={3}
+                value={draft.summary}
+                onChange={event => setDraft(current => ({ ...current, summary: event.target.value }))}
+              />
+              {!confirmDelete ? (
+                <div className="edit-actions">
+                  <button type="submit" className="edit-save">Save</button>
+                  {editingNode.parentId !== null && (
+                    <button type="button" className="edit-delete" onClick={() => setConfirmDelete(true)}>Delete</button>
+                  )}
+                  <button type="button" onClick={() => setEditingId(null)}>Close</button>
+                </div>
+              ) : (
+                <div className="edit-confirm">
+                  <p>
+                    Delete “{editingNode.label}”
+                    {editingBranchSize > 0 && ` and the ${editingBranchSize} topic${editingBranchSize === 1 ? '' : 's'} inside it`}?
+                  </p>
+                  <div className="edit-actions">
+                    <button
+                      type="button"
+                      className="edit-delete"
+                      onClick={() => { if (tryEdit(state => deleteNode(state, editingNode.id))) setEditingId(null); }}
+                    >
+                      Yes, delete
+                    </button>
+                    <button type="button" onClick={() => setConfirmDelete(false)}>Cancel</button>
+                  </div>
+                </div>
+              )}
+            </form>
+          </Panel>
+        )}
         {focusId && (
           <Panel position="top-left">
             <div className="map-breadcrumb">
@@ -331,6 +525,16 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
         )}
         <Panel position="top-right">
           <div className="map-controls">
+            {onEdit && (
+              <button
+                type="button"
+                className="show-all-toggle"
+                aria-pressed={editMode}
+                onClick={toggleEditMode}
+              >
+                {editMode ? 'Done editing' : 'Edit'}
+              </button>
+            )}
             <button
               type="button"
               className="show-all-toggle"

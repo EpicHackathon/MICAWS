@@ -36,7 +36,7 @@ export function MeetingResults({ segments, isRecording, clearTranscript, onManua
 
       {error && <p role="alert" className="error-message">Error: {error}</p>}
 
-      <MeetingView key={'view-' + viewVersion} state={state} />
+      <MeetingView key={'view-' + viewVersion} state={state} onEdit={processor.applyEdit} />
       <ManualInput key={'input-' + viewVersion} disabled={captureBusy || isRecording || isProcessing || !onManualSegment} onSubmit={onManualSegment} />
     </>
   );

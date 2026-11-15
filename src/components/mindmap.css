@@ -286,6 +286,118 @@
   box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.15));
 }
 
+/* ---- EDIT MODE ---- */
+/* boxes can be picked up */
+.mindmap.editing .react-flow__node.draggable {
+  cursor: grab;
+}
+.mindmap.editing .react-flow__node.dragging {
+  cursor: grabbing;
+  opacity: 0.85;
+  box-shadow: var(--shadow-md, 0 6px 16px rgba(0, 0, 0, 0.18));
+}
+/* the box you'd drop onto */
+.mindmap .react-flow__node.drop-target {
+  outline: 3px dashed var(--hover-border);
+  outline-offset: 5px;
+}
+/* the box open in the edit panel */
+.mindmap .react-flow__node.edit-selected {
+  outline: 2px solid var(--main-border);
+  outline-offset: 4px;
+}
+/* in edit mode the connection dots appear so you can drag dot-to-dot */
+.mindmap.editing .react-flow__handle {
+  opacity: 1;
+  width: 10px;
+  height: 10px;
+  background: var(--point-border);
+  border: 2px solid var(--map-bg);
+}
+.mindmap-bubble.editing .react-flow__handle {
+  opacity: 0.9;
+}
+
+.edit-hint {
+  max-width: min(70vw, 560px);
+  padding: 7px 14px;
+  border-radius: 10px;
+  background: var(--switch-active);
+  border: 1px solid var(--point-border);
+  color: var(--switch-text-active);
+  font: 500 12.5px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  text-align: center;
+}
+.edit-error {
+  color: var(--unread);
+  font-weight: 600;
+}
+
+.edit-panel {
+  display: grid;
+  gap: 6px;
+  width: min(300px, 70vw);
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--switch-active);
+  border: 1px solid var(--point-border);
+  box-shadow: var(--shadow-md, 0 6px 16px rgba(0, 0, 0, 0.12));
+  color: var(--title);
+  font: 400 13px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.edit-panel label {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--summary);
+}
+.edit-panel input,
+.edit-panel textarea {
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid var(--detail-border);
+  border-radius: 8px;
+  background: var(--map-bg);
+  color: var(--title);
+  font: inherit;
+  resize: vertical;
+}
+.edit-panel input:focus-visible,
+.edit-panel textarea:focus-visible,
+.edit-panel button:focus-visible {
+  outline: 2px solid var(--hover-border);
+  outline-offset: 1px;
+}
+.edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.edit-panel button {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--detail-border);
+  background: var(--switch-bg);
+  color: var(--title);
+  font: 500 12.5px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  cursor: pointer;
+}
+.edit-panel .edit-save {
+  background: var(--main-fill);
+  border-color: var(--main-border);
+  color: var(--title);
+}
+.edit-panel .edit-delete {
+  color: var(--unread);
+  border-color: var(--unread);
+  background: transparent;
+}
+.edit-confirm p {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: var(--title);
+}
+
 /* ---- Connection dots: hidden (not in our design) ---- */
 .mindmap .react-flow__handle {
   opacity: 0;

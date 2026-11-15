@@ -6,7 +6,8 @@ export function useMeetingProcessor(segments, isRecording, intervalMs = 10_000) 
   const [state, setState] = useState(emptyMeetingState);
   const [error, setError] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const meeting = useRef({ state: emptyMeetingState, cursor: 0, request: null });
+  // editsDuringRequest: hand edits made while the AI is working; replayed on its answer.
+  const meeting = useRef({ state: emptyMeetingState, cursor: 0, request: null, editsDuringRequest: [] });
   const latest = useRef({ segments, isRecording });
 
   useLayoutEffect(() => {
@@ -20,6 +21,7 @@ export function useMeetingProcessor(segments, isRecording, intervalMs = 10_000) 
 
     const controller = new AbortController();
     current.request = controller;
+    current.editsDuringRequest = [];
     setIsProcessing(true);
     setError(null);
     let succeeded = false;
@@ -30,9 +32,15 @@ export function useMeetingProcessor(segments, isRecording, intervalMs = 10_000) 
         { signal: controller.signal },
       );
       if (meeting.current !== current) return;
+      // The AI answered based on the map from before any edits made meanwhile: replay them.
+      let merged = next;
+      for (const edit of current.editsDuringRequest) {
+        try { merged = edit(merged); } catch { /* edit no longer applies (e.g. topic changed) */ }
+      }
+      current.editsDuringRequest = [];
       current.cursor = end;
-      current.state = next;
-      setState(next);
+      current.state = merged;
+      setState(merged);
       succeeded = true;
     } catch (cause) {
       if (meeting.current === current) setError(cause.message || 'Processing failed.');
@@ -59,9 +67,20 @@ export function useMeetingProcessor(segments, isRecording, intervalMs = 10_000) 
     void processPending();
   }, [isRecording, segments.length, processPending]);
 
+  // Apply a hand edit (move / rename / delete) from the mind map.
+  // `edit` is a function state -> new state (see src/shared/mapEdits.js); it may throw to refuse.
+  // The edited map becomes what the AI builds on next time, so edits are kept.
+  const applyEdit = useCallback(edit => {
+    const current = meeting.current;
+    const next = edit(current.state);   // throws -> caller shows the message
+    current.state = next;
+    if (current.request) current.editsDuringRequest.push(edit);
+    setState(next);
+  }, []);
+
   const invalidate = useCallback(() => {
     const old = meeting.current;
-    meeting.current = { state: emptyMeetingState, cursor: 0, request: null };
+    meeting.current = { state: emptyMeetingState, cursor: 0, request: null, editsDuringRequest: [] };
     old.request?.abort();
   }, []);
 
@@ -75,5 +94,5 @@ export function useMeetingProcessor(segments, isRecording, intervalMs = 10_000) 
     setIsProcessing(false);
   }, [invalidate]);
 
-  return { state, isProcessing, error, processPending, reset };
+  return { state, isProcessing, error, processPending, reset, applyEdit };
 }
