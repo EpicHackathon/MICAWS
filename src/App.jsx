@@ -11,13 +11,14 @@ import { demoBatches } from './shared/demo.js';
  * MeetingResults component displays the derived state (Nodes, Edges, Actions) 
  * and controls for processing segments. It is now purely a display layer.
  */
-export function MeetingResults({ segments, isRecording, clearTranscript, onManualSegment, retryTranscription, captureBusy, children }) {
+export function MeetingResults({ segments, isRecording, clearTranscript, onManualSegment, captureBusy, devMode = false, children }) {
   // The hook handles state updates based on incoming segments
   const [viewVersion, setViewVersion] = useState(0);
   // True while someone edits the live mind map: AI map updates wait, recording continues.
   const [editingMap, setEditingMap] = useState(false);
   const processor = useMeetingProcessor(segments, isRecording, undefined, { paused: editingMap });
-  const { state, error, isProcessing, processPending, reset } = processor;
+  // Failed transcription / AI updates retry by themselves (no retry button needed).
+  const { state, error, isProcessing, reset } = processor;
 
   function resetMeeting() {
     if (clearTranscript() !== false) {
@@ -30,9 +31,6 @@ export function MeetingResults({ segments, isRecording, clearTranscript, onManua
     <>
       {children?.({ isProcessing }) || null}
       <div className="control-actions">
-        <button className="btn-ghost" onClick={() => { retryTranscription?.(); void processPending(); }} disabled={isProcessing}>
-          Process pending / retry
-        </button>
         <button className="btn-ghost" onClick={resetMeeting}>Reset session</button>
       </div>
 
@@ -46,8 +44,11 @@ export function MeetingResults({ segments, isRecording, clearTranscript, onManua
         pendingCount={processor.pendingCount}
         segments={segments}
         isRecording={isRecording}
+        devMode={devMode}
       />
-      <ManualInput key={'input-' + viewVersion} disabled={captureBusy || isRecording || isProcessing || !onManualSegment} onSubmit={onManualSegment} />
+      {devMode && (
+        <ManualInput key={'input-' + viewVersion} disabled={captureBusy || isRecording || isProcessing || !onManualSegment} onSubmit={onManualSegment} />
+      )}
     </>
   );
 }
@@ -62,6 +63,9 @@ export default function App() {
   const nextStart = useRef(0);
   // Marena's color theme switcher (neutral / warm / cool), applied to <body>.
   const [theme, setTheme] = useState('neutral');
+  // Dev/backup tools (test text, sample batches, sample meeting) only show when the
+  // web address ends in ?dev, e.g. http://localhost:5173/?dev
+  const [devMode] = useState(() => new URLSearchParams(window.location.search).has('dev'));
   useEffect(() => {
     document.body.dataset.theme = theme;
   }, [theme]);
@@ -129,13 +133,13 @@ export default function App() {
         segments={segments} 
         isRecording={isRecording} 
         clearTranscript={clearSession}
-        retryTranscription={microphone.retry}
         captureBusy={busy}
+        devMode={devMode}
         onManualSegment={segment => setSegments(current => [...current, segment])}
       >
         {({ isProcessing }) => (
           <>
-            <button
+            {devMode && <button
               disabled={busy || isProcessing || sampleBatch >= demoBatches.length}
               className="btn-ghost"
               onClick={() => {
@@ -144,7 +148,7 @@ export default function App() {
               }}
             >
               {sampleBatch < demoBatches.length ? `Send sample batch ${sampleBatch + 1}` : 'All sample batches sent'}
-            </button>
+            </button>}
             <p className={isProcessing ? 'processing-status' : 'idle-status'}>
                 {isProcessing ? '🧠 AI processing current segments...' : `Awaiting input. Segments captured: ${segments.length}`}
             </p>

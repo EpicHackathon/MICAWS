@@ -110,6 +110,43 @@ test('failed audio remains queued; retry uses same ID and appends once', async t
   assert.equal(statuses.at(-1), 'idle');
 });
 
+test('failed transcription retries by itself, waiting longer each time', async t => {
+  let calls = 0;
+  t.mock.method(globalThis, 'fetch', async (_, { body }) => {
+    calls += 1;
+    return calls <= 2
+      ? Response.json({ detail: 'Server unavailable.' }, { status: 503 })
+      : Response.json([segment(Number(body.get('start_seconds')))]);
+  });
+  const { recorder, transcripts, errors } = session({ retryDelays: [20, 40] });
+  recorder.receive(chunk());
+  await tick();
+  assert.equal(calls, 1);
+  assert.match(errors.at(-1), /retrying automatically/);
+  await new Promise(resolve => setTimeout(resolve, 30));   // first retry after 20ms (fails again)
+  assert.equal(calls, 2);
+  assert.equal(transcripts.length, 0);
+  await new Promise(resolve => setTimeout(resolve, 60));   // second retry after 40ms (works)
+  assert.equal(calls, 3);
+  assert.equal(transcripts.length, 1);
+  assert.equal(recorder.queue.length, 0);
+  recorder.cancel();
+});
+
+test('reset stops a waiting automatic retry', async t => {
+  let calls = 0;
+  t.mock.method(globalThis, 'fetch', async () => {
+    calls += 1;
+    return Response.json({ detail: 'Server unavailable.' }, { status: 503 });
+  });
+  const { recorder } = session({ retryDelays: [20] });
+  recorder.receive(chunk());
+  await tick();
+  recorder.cancel();
+  await new Promise(resolve => setTimeout(resolve, 40));
+  assert.equal(calls, 1);
+});
+
 test('cancel aborts upload and ignores a late response or worklet message', async t => {
   let resolve, signal;
   t.mock.method(globalThis, 'fetch', async (_, options) => {

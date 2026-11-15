@@ -2,6 +2,12 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { processTranscript } from '../services/processTranscript.js';
 import { emptyMeetingState } from '../shared/meetingSchema.js';
 
+// A failed AI map update retries by itself: wait 1s, then 2s, 4s... (then every 30s) until it works.
+const RETRY_DELAYS_MS = [1000, 2000, 4000, 8000, 15000, 30000];
+const freshMeeting = () => ({
+  state: emptyMeetingState, cursor: 0, request: null, editsDuringRequest: [], failures: 0, retryTimer: null,
+});
+
 // paused: while someone is editing the map, hold AI map updates. Recording and the transcript
 // keep going; when paused turns off, everything said in the meantime is processed at once.
 export function useMeetingProcessor(segments, isRecording, intervalMs = 10_000, { paused = false } = {}) {
@@ -9,7 +15,7 @@ export function useMeetingProcessor(segments, isRecording, intervalMs = 10_000, 
   const [error, setError] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   // editsDuringRequest: hand edits made while the AI is working; replayed on its answer.
-  const meeting = useRef({ state: emptyMeetingState, cursor: 0, request: null, editsDuringRequest: [] });
+  const meeting = useRef(freshMeeting());
   const latest = useRef({ segments, isRecording, paused });
 
   useLayoutEffect(() => {
@@ -22,6 +28,7 @@ export function useMeetingProcessor(segments, isRecording, intervalMs = 10_000, 
     if (latest.current.paused) return;   // map is being edited: notes wait, nothing is lost
     if (current.request || end <= current.cursor) return;
 
+    clearTimeout(current.retryTimer);   // running now, so a scheduled retry isn't needed
     const controller = new AbortController();
     current.request = controller;
     current.editsDuringRequest = [];
@@ -44,9 +51,16 @@ export function useMeetingProcessor(segments, isRecording, intervalMs = 10_000, 
       current.cursor = end;
       current.state = merged;
       setState(merged);
+      current.failures = 0;
       succeeded = true;
     } catch (cause) {
-      if (meeting.current === current) setError(cause.message || 'Processing failed.');
+      if (meeting.current === current) {
+        // Nothing is lost (the cursor didn't move): try the same lines again after a pause.
+        const delay = RETRY_DELAYS_MS[Math.min(current.failures, RETRY_DELAYS_MS.length - 1)];
+        current.failures += 1;
+        setError(`${cause.message || 'Processing failed.'} Retrying automatically in ${Math.round(delay / 1000)}s.`);
+        current.retryTimer = setTimeout(() => { void drain(); }, delay);
+      }
     } finally {
       if (meeting.current === current) {
         current.request = null;
@@ -83,7 +97,8 @@ export function useMeetingProcessor(segments, isRecording, intervalMs = 10_000, 
 
   const invalidate = useCallback(() => {
     const old = meeting.current;
-    meeting.current = { state: emptyMeetingState, cursor: 0, request: null, editsDuringRequest: [] };
+    meeting.current = freshMeeting();
+    clearTimeout(old.retryTimer);
     old.request?.abort();
   }, []);
 

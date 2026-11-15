@@ -29,7 +29,7 @@ export default function TranscriptPanel({ segments = [], isRecording = false }) 
       </header>
       <div className="transcript-scroll" ref={scroller} onScroll={handleScroll} tabIndex={0}>
         {segments.length === 0 ? (
-          <p className="transcript-empty">Nothing said yet. Start recording, send a sample batch, or type test text below.</p>
+          <p className="transcript-empty">Nothing said yet. Press Start Recording to begin.</p>
         ) : (
           segments.map((segment, index) => (
             <p key={index} className="transcript-line">

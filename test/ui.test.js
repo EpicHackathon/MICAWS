@@ -6,7 +6,7 @@ import { createServer } from 'vite';
 import { createHandler } from '../api/process.js';
 
 test('typed input, details navigation, view toggle and reset work through the app', async t => {
-  const dom = new JSDOM('<div id="root"></div>', { url: 'http://localhost/' });
+  const dom = new JSDOM('<div id="root"></div>', { url: 'http://localhost/?dev' });   // ?dev shows the test-text box
   const originals = new Map();
   function expose(key, value) {
     originals.set(key, Object.getOwnPropertyDescriptor(globalThis, key));
@@ -38,6 +38,7 @@ test('typed input, details navigation, view toggle and reset work through the ap
   const { default: App } = await server.ssrLoadModule('/src/App.jsx');
   const root = createRoot(document.getElementById('root'));
   const button = text => [...document.querySelectorAll('button')].find(item => item.textContent.trim() === text);
+  const topicCount = () => Number(document.querySelector('[data-topic-count]')?.dataset.topicCount);
   const click = async text => {
     const target = button(text);
     assert.ok(target, 'Button exists: ' + text);
@@ -61,28 +62,27 @@ test('typed input, details navigation, view toggle and reset work through the ap
       await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
     }
     assert.ok(document.querySelector('[role=alert]').textContent.includes('Temporary failure'));
-    await click('Process pending / retry');
-    assert.equal(requests.length, 2);
-    assert.deepEqual(requests[0], requests[1]);
-    for (let attempt = 0; attempt < 100 && !document.body.textContent.includes('Topics (2)'); attempt++) {
+    assert.ok(document.querySelector('[role=alert]').textContent.includes('Retrying automatically'));
+    assert.equal(button('Process pending / retry'), undefined);   // no button: it retries by itself
+    for (let attempt = 0; attempt < 400 && requests.length < 2; attempt++) {
       await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
     }
-    assert.ok(document.body.textContent.includes('Topics (2)'), document.body.textContent);
-    await click('Show topic list');
-    await click('Quoted Test Input (3/5)');
-    const panel = document.querySelector('[aria-label="Node details"]');
-    assert.ok(panel.textContent.includes('We decided to launch next week'));
-    assert.ok(panel.textContent.includes('Importance 3/5'));
-    await click('Mock Meeting');
-    assert.ok(document.querySelector('[aria-label="Node details"]').textContent.includes('Direct children'));
-    await click('Close node details');
+    assert.equal(requests.length, 2);
+    assert.deepEqual(requests[0], requests[1]);
+    for (let attempt = 0; attempt < 400 && topicCount() !== 2; attempt++) {
+      await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
+    }
+    assert.equal(topicCount(), 2, document.body.textContent);
+    // the topic list and its details panel are gone: the mind map is the only view
+    assert.equal(button('Show topic list'), undefined);
     assert.equal(document.querySelector('[aria-label="Node details"]'), null);
-    await click('Show mind map');
-    assert.ok(button('Show topic list'));
-    assert.equal(document.querySelector('[aria-label="Toggle interactivity"]'), null);
+    assert.ok(document.querySelector('.mindmap'), 'mind map is shown');
+    // ?dev is on, so the backup tools are visible
+    assert.ok(button('Load sample meeting'));
+    assert.ok(button('Send sample batch 1'));
     dom.window.confirm = () => false;
     await click('Reset session');
-    assert.ok(document.body.textContent.includes('Topics (2)'));
+    assert.equal(topicCount(), 2);
     dom.window.confirm = () => true;
     await click('Reset session');
     assert.ok(document.body.textContent.includes('No topics yet.'));

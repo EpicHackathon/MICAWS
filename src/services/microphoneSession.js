@@ -1,8 +1,13 @@
 import { encodeWav } from '../audio/encodeWav.js';
 import { transcribeAudio } from './transcribeAudio.js';
 
+// Failed transcription retries by itself: wait 1s, then 2s, 4s... (then every 30s) until it works.
+export const RETRY_DELAYS_MS = [1000, 2000, 4000, 8000, 15000, 30000];
+
 export class MicrophoneSession {
-  constructor({ onTranscript, onStatus, onError, startSeconds = 0 }) {
+  constructor({ onTranscript, onStatus, onError, startSeconds = 0, retryDelays = RETRY_DELAYS_MS }) {
+    this.retryDelays = retryDelays;
+    this.failures = 0;   // failures in a row (resets after a chunk works)
     this.onTranscript = onTranscript;
     this.onStatus = onStatus;
     this.onError = onError;
@@ -97,14 +102,18 @@ export class MicrophoneSession {
         const transcript = await transcribeAudio(chunk.audio, this.controller.signal, chunk);
         if (this.cancelled) return;
         this.queue.shift();
+        this.failures = 0;
         this.onTranscript(transcript, chunk.endSeconds);
       }
     } catch (cause) {
       if (!this.cancelled) {
+        // Keep the audio and keep recording; try the same chunk again by itself after a pause.
         this.failed = true;
-        this.stop();
-        this.onStatus('transcribing');
-        this.onError(`${cause.message} Audio is retained. Click Process pending / retry to try again, or Reset session to discard it.`);
+        const delay = this.retryDelays[Math.min(this.failures, this.retryDelays.length - 1)];
+        this.failures += 1;
+        this.onError(`${cause.message} Audio is retained; retrying automatically in ${Math.round(delay / 1000)}s.`);
+        clearTimeout(this.retryTimer);
+        this.retryTimer = setTimeout(() => this.retry(), delay);
       }
     } finally {
       this.processing = false;
@@ -123,14 +132,16 @@ export class MicrophoneSession {
       if (this.cancelled || this.captureDone) return;
       this.captureDone = true;
       this.release();
-      this.onError('The final audio chunk could not be recovered. Earlier audio is retained; use Process pending / retry if transcription failed.');
+      this.onError('The final audio chunk could not be recovered. Earlier audio is retained and still being transcribed.');
       void this.drain();
     }, 5000);
     this.node.port.postMessage('stop');
     this.stream.getTracks().forEach(track => track.stop());
   }
 
+  // Runs by itself after a failure (see RETRY_DELAYS_MS); calling it directly retries right away.
   retry() {
+    clearTimeout(this.retryTimer);
     if (!this.failed || this.cancelled) return;
     this.failed = false;
     this.onError(null);
@@ -149,6 +160,7 @@ export class MicrophoneSession {
 
   cancel() {
     this.cancelled = true;
+    clearTimeout(this.retryTimer);
     this.controller.abort();
     this.queue = [];
     this.release();

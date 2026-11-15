@@ -12,7 +12,7 @@ const readSavedWidth = () => {
 
 export default function MeetingView({
   state: liveState, onEdit: onLiveEdit, onEditingChange, pendingCount = 0,
-  segments = [], isRecording = false,
+  segments = [], isRecording = false, devMode = false,
 }) {
   // Transcript side panel: width (drag the handle) and hide/show.
   const layoutRef = useRef(null);
@@ -44,9 +44,7 @@ export default function MeetingView({
     handle.addEventListener('pointercancel', stop);
   }
 
-  const [selectedNodeId, setSelectedNodeId] = useState(null);
-  const [showMap, setShowMap] = useState(true);
-  // Dev helper: show the sample hackathon meeting instead of the live one.
+  // Dev helper (only with ?dev in the web address): show the sample hackathon meeting instead of the live one.
   const [showSample, setShowSample] = useState(false);
   // The sample gets its own editable copy so people can practice moving/editing.
   const [sampleState, setSampleState] = useState(mockMeeting);
@@ -57,40 +55,28 @@ export default function MeetingView({
     ? edit => setSampleState(edit(sampleState))   // run now so a refused edit throws to the map
     : onLiveEdit;
   const { nodes = [], edges = [], actionItems = [] } = state || {};
-  const selected = nodes.find(node => node.id === selectedNodeId);
-  const parent = selected && nodes.find(node => node.id === selected.parentId);
-  const children = selected ? nodes.filter(node => node.parentId === selected.id) : [];
 
   return (
-    <section aria-label="Meeting results">
-      <h2>Topics ({nodes.length})</h2>
-      <button type="button" onClick={() => setShowMap(current => !current)}
-        aria-controls="topic-view">
-        {showMap ? 'Show topic list' : 'Show mind map'}
-      </button>{' '}
-      <button type="button" onClick={() => { onEditingChange?.(false); setShowSample(current => !current); setSelectedNodeId(null); }}>
-        {showSample ? 'Back to live meeting' : 'Load sample meeting'}
-      </button>
+    // data-topic-count: lets the tests see how many topics there are (no visible heading anymore)
+    <section aria-label="Meeting results" data-topic-count={nodes.length}>
+      {devMode && (
+        <button type="button" onClick={() => { onEditingChange?.(false); setShowSample(current => !current); }}>
+          {showSample ? 'Back to live meeting' : 'Load sample meeting'}
+        </button>
+      )}
       <div className="meeting-layout" ref={layoutRef}>
         <div className="meeting-map-area">
-            {!nodes.length ? <p>No topics yet. Send a sample batch or enter test text below.</p> : (
-                showMap ? (
-                    <div className="mindmap-frame">
-                        <MindMap nodes={nodes} edges={edges} selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} live={!showSample} onEdit={onEdit}
-                          onEditingChange={showSample ? undefined : onEditingChange}
-                          pendingCount={showSample ? 0 : pendingCount} />
-                    </div>
-                ) : (
-                    <ul className="topic-list">
-                        {nodes.map(node => (
-                            <li key={node.id}>
-                                <button type="button" onClick={() => setSelectedNodeId(node.id)} aria-pressed={selectedNodeId === node.id}>
-                                    {node.label} ({node.importance}/5)
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
-                )
+            {!nodes.length ? (
+                // empty map box (same size as the map) with the message centered inside
+                <div className="mindmap-frame mindmap-empty">
+                    <p>No topics yet. Press Start Recording and the mind map will grow as people talk.</p>
+                </div>
+            ) : (
+                <div className="mindmap-frame">
+                    <MindMap nodes={nodes} edges={edges} live={!showSample} onEdit={onEdit}
+                      onEditingChange={showSample ? undefined : onEditingChange}
+                      pendingCount={showSample ? 0 : pendingCount} />
+                </div>
             )}
         </div>
         {!transcriptHidden && (
@@ -120,24 +106,6 @@ export default function MeetingView({
           {!transcriptHidden && <TranscriptPanel segments={segments} isRecording={isRecording} />}
         </aside>
       </div>
-      {selected && (
-        <section aria-label="Node details" aria-live="polite" className="node-details-panel">
-          <button type="button" onClick={() => setSelectedNodeId(null)}>Close node details</button>
-          <h3>{selected.label}</h3>
-          <p>Importance {selected.importance}/5</p>
-          <p>{selected.summary}</p>
-          <p>Parent {parent ? (
-            <button type="button" onClick={() => setSelectedNodeId(parent.id)}>{parent.label}</button>
-          ) : '— main idea'}</p>
-          <h4>Direct children</h4>
-          {children.length ? <ul>{children.map(child => (
-            <li key={child.id}><button type="button" onClick={() => setSelectedNodeId(child.id)}>
-              {child.label}
-            </button></li>
-          ))}</ul> : <p>No direct children.</p>}
-          <p>Tasks are recorded for the whole meeting. The current data format does not link tasks to individual topics.</p>
-        </section>
-      )}
       <h2>Meeting action items ({actionItems.length})</h2>
       {actionItems.length ? <ul className="action-items">{actionItems.map(item => <li key={item.id}>{item.text}</li>)}</ul>
         : <p>No action items yet.</p>}

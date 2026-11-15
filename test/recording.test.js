@@ -57,7 +57,8 @@ test('recording hook and App handle permissions, transcription retries, processi
     await act(async () => target.click());
   };
   async function until(predicate) {
-    for (let attempt = 0; attempt < 100 && !predicate(); attempt++) {
+    // up to ~4s: long enough for the 1s automatic retry
+    for (let attempt = 0; attempt < 400 && !predicate(); attempt++) {
       await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
     }
     assert.ok(predicate(), document.body.textContent);
@@ -70,6 +71,10 @@ test('recording hook and App handle permissions, transcription retries, processi
     await act(async () => root.render(React.createElement(App)));
     assert.equal(button(startLabel).disabled, false);
     assert.equal(button(stopLabel).disabled, true);
+    // no ?dev in the address: the dev/backup tools stay hidden
+    assert.equal(button('Load sample meeting'), undefined);
+    assert.equal(button('Send sample batch 1'), undefined);
+    assert.equal(document.querySelector('textarea'), null);
 
     const getMicrophone = navigator.mediaDevices.getUserMedia;
     navigator.mediaDevices.getUserMedia = async () => { throw new Error('Permission denied'); };
@@ -90,14 +95,15 @@ test('recording hook and App handle permissions, transcription retries, processi
     await emit(audio.nodes[0], chunk);
     await emit(audio.nodes[0], { type: 'stopped' });
     await until(() => document.body.textContent.includes('Transcription temporarily unavailable'));
+    assert.ok(document.body.textContent.includes('retrying automatically'));
     assert.equal(requests.length, 0);
-    await click('Process pending / retry');
+    assert.equal(button('Process pending / retry'), undefined);   // no button: transcription retries by itself
     await until(() => document.body.textContent.includes('AI temporarily unavailable'));
     assert.equal(transcriptions[0].body.get('chunk_id'), transcriptions[1].body.get('chunk_id'));
     assert.deepEqual(requests[0].newSegments, [{ time: 0, speaker: null, text: 'We agreed to launch next week.' }]);
     assert.ok(document.querySelector('[aria-label="Transcript"]').textContent.includes('0.0s'));
-    await click('Process pending / retry');
-    await until(() => document.body.textContent.includes('Topics (2)'));
+    assert.ok(document.body.textContent.includes('Retrying automatically'));   // the AI update retries by itself too
+    await until(() => document.querySelector('[data-topic-count]')?.dataset.topicCount === '2');
     assert.deepEqual(requests[1], requests[0]);
 
     await click(startLabel);
