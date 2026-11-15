@@ -1,6 +1,6 @@
 # MICAWS
 
-React holds the finalized transcript and the latest valid meeting state. The hook sends only the next unprocessed slice and the prior state to the same-origin API. The API validates both, calls Gemini with structured JSON enabled, validates the complete update, and returns it. The hook replaces its state and advances its transcript cursor only after success.
+React holds the finalized transcript and the latest valid meeting state. The hook sends only the next unprocessed slice and prior state to the same-origin API. The API can use Gemini or a local Ollama model, validates the complete result, and returns it. The hook advances its transcript cursor only after success.
 
 ```text
 MICAWS/
@@ -70,6 +70,10 @@ Open `.env.local` in VS Code and set `MEETING_MOCK=true` for the sample demo. Sa
 2. Edit .env.local. Set `MEETING_MOCK=false` and paste the key as `GEMINI_API_KEY=your_actual_key`. Keep it out of Git and never put it in a `VITE_` environment variable.
 3. Restart `npm run dev`. Repeat the demo or endpoint test. Live wording and IDs may differ from the fixture. Existing IDs should remain stable within the meeting.
 4. The default `GEMINI_MODEL=gemini-3.5-flash-lite` supports structured output. Optional `GEMINI_MODELS=gemini-2.5-flash,gemini-2.5-flash-lite` adds ordered quota fallbacks; choose models enabled for your API key. A model that returns HTTP 429 is skipped for 60 seconds (configurable with `GEMINI_QUOTA_COOLDOWN_MS`). If all are limited, the request stays available for retry. Shared quotas can affect every model. Check current model availability and pricing before use. [Models](https://ai.google.dev/gemini-api/docs/models) · [Pricing](https://ai.google.dev/gemini-api/docs/pricing)
+
+## Use local AI with Ollama
+
+Install [Ollama](https://ollama.com/download), open a terminal, and download a model: `ollama pull qwen3:8b`. This model needs several GB of memory; a smaller model may run better on older computers. In `.env.local`, set `MEETING_MOCK=false`, `AI_PROVIDER=ollama`, and `OLLAMA_MODEL=qwen3:8b`. Ollama's default local address is `http://127.0.0.1:11434`; change `OLLAMA_URL` if needed. Start Ollama and then restart Vite. Both mind-map updates and end-of-meeting summaries use the local model, so no Gemini API key or quota is involved. Responses are limited by your computer's memory and speed. Local Ollama works with the development server; it is not reachable from a Vercel deployment. Ollama supports schema-constrained JSON responses used by MICAWS. [Structured outputs](https://github.com/ollama/ollama/blob/main/docs/capabilities/structured-outputs.mdx)
 
 ## Integrate in your team app
 

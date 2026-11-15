@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { summaryJsonSchema, summaryRequestSchema, summarySchema } from '../src/shared/summarySchema.js';
+import { generateWithOllama } from './ollama.js';
 
 // POST /api/summary  { segments, state }  ->  { overview, keyPoints }
 // Called once recording stops and the mind map has caught up.
@@ -57,9 +58,13 @@ export function createSummaryHandler({ env = process.env, generateText = generat
     if (env.MEETING_MOCK === 'true') {
       candidate = mockSummary(state);
     } else {
-      if (!env.GEMINI_API_KEY?.trim()) return error(503, 'Set GEMINI_API_KEY on the server.');
       try {
-        candidate = JSON.parse(await generateText({ segments, state }, env));
+        if (env.AI_PROVIDER === 'ollama') {
+          candidate = JSON.parse(await generateWithOllama({ input: { segments, state }, env, systemInstruction, schema: summaryJsonSchema }));
+        } else {
+          if (!env.GEMINI_API_KEY?.trim()) return error(503, 'Set GEMINI_API_KEY on the server.');
+          candidate = JSON.parse(await generateText({ segments, state }, env));
+        }
       } catch (cause) {
         if (Number(cause?.status) === 429) return error(429, 'Gemini rate limit or quota reached. Wait before retrying.');
         return error(502, 'Could not write the meeting summary. Retrying may help.');
