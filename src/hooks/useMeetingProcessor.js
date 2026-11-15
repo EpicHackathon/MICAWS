@@ -2,21 +2,24 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { processTranscript } from '../services/processTranscript.js';
 import { emptyMeetingState } from '../shared/meetingSchema.js';
 
-export function useMeetingProcessor(segments, isRecording, intervalMs = 10_000) {
+// paused: while someone is editing the map, hold AI map updates. Recording and the transcript
+// keep going; when paused turns off, everything said in the meantime is processed at once.
+export function useMeetingProcessor(segments, isRecording, intervalMs = 10_000, { paused = false } = {}) {
   const [state, setState] = useState(emptyMeetingState);
   const [error, setError] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   // editsDuringRequest: hand edits made while the AI is working; replayed on its answer.
   const meeting = useRef({ state: emptyMeetingState, cursor: 0, request: null, editsDuringRequest: [] });
-  const latest = useRef({ segments, isRecording });
+  const latest = useRef({ segments, isRecording, paused });
 
   useLayoutEffect(() => {
-    latest.current = { segments, isRecording };
-  }, [segments, isRecording]);
+    latest.current = { segments, isRecording, paused };
+  }, [segments, isRecording, paused]);
 
   const processPending = useCallback(async function drain() {
     const current = meeting.current;
     const end = latest.current.segments.length;
+    if (latest.current.paused) return;   // map is being edited: notes wait, nothing is lost
     if (current.request || end <= current.cursor) return;
 
     const controller = new AbortController();
@@ -65,7 +68,7 @@ export function useMeetingProcessor(segments, isRecording, intervalMs = 10_000) 
 
   useEffect(() => {
     void processPending();
-  }, [isRecording, segments.length, processPending]);
+  }, [isRecording, segments.length, paused, processPending]);   // un-pausing catches up
 
   // Apply a hand edit (move / rename / delete) from the mind map.
   // `edit` is a function state -> new state (see src/shared/mapEdits.js); it may throw to refuse.
@@ -94,5 +97,8 @@ export function useMeetingProcessor(segments, isRecording, intervalMs = 10_000) 
     setIsProcessing(false);
   }, [invalidate]);
 
-  return { state, isProcessing, error, processPending, reset, applyEdit };
+  // Transcript lines said but not yet on the map (shown while editing pauses updates).
+  const pendingCount = Math.max(0, segments.length - meeting.current.cursor);
+
+  return { state, isProcessing, error, processPending, reset, applyEdit, pendingCount };
 }

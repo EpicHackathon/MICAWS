@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { moveNode, editNode, deleteNode, subtreeIds } from '../src/shared/mapEdits.js';
+import { moveNode, editNode, deleteNode, subtreeIds, moveOut, addNode } from '../src/shared/mapEdits.js';
 import { meetingSchema } from '../src/shared/meetingSchema.js';
 import { mockMeeting } from '../src/shared/mockMeeting.js';
 
@@ -45,4 +45,24 @@ test('delete removes the whole branch and its edges, but never the main idea', (
   assert.ok(next.edges.every(e => !gone.has(e.source) && !gone.has(e.target)));
   valid(next);
   assert.throws(() => deleteNode(sample(), 'project'), /main idea/);
+});
+
+test('move out: a detail becomes a main point; a main point cannot go higher', () => {
+  const next = moveOut(sample(), 'stack-react');          // detail under Tech Stack
+  assert.equal(next.nodes.find(n => n.id === 'stack-react').parentId, 'project');
+  valid(next);
+  assert.throws(() => moveOut(sample(), 'stack'), /already a main point/);
+});
+
+test('add a topic with just a title (summary defaults to the title)', () => {
+  const next = addNode(sample(), 'timeline', { label: 'Judging at 1 PM' });
+  const added = next.nodes.find(n => n.label === 'Judging at 1 PM');
+  assert.equal(added.parentId, 'timeline');
+  assert.equal(added.summary, 'Judging at 1 PM');
+  assert.equal(added.importance, 2);
+  valid(next);
+  const point = addNode(sample(), 'project', { label: 'Budget', summary: 'No budget needed.' }).nodes.find(n => n.label === 'Budget');
+  assert.equal(point.importance, 4);
+  assert.throws(() => addNode(sample(), 'timeline', { label: '  ' }), /title/);
+  assert.throws(() => addNode(sample(), 'nope', { label: 'y' }), /no longer exists/);
 });

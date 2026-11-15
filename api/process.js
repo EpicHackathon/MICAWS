@@ -15,7 +15,7 @@ Return only the complete updated JSON state using exactly these fields:
 
 STRUCTURE RULES
 
-1. Main idea: exactly ONE node with parentId null. It names the meeting's overall purpose. Create it from the first meaningful segment. Later you may refine its label or summary, but never change its id and never create a second one.
+1. Main idea: exactly ONE node with parentId null. It names the meeting's overall purpose. Create it from the first meaningful segment, but treat it as a DRAFT: on every update, check that its label and summary still describe the WHOLE conversation so far, and rewrite them (same id) when the discussion grows or moves on. If the meeting covers several separate subjects, make the main idea an umbrella that names them together (e.g. "Launch Plan and Hiring") and make each subject a main point. Never change its id and never create a second one.
 
 2. Main points: parentId = the main idea's id. Each is a distinct theme (decision area, plan, problem, outcome). Usually 3–6 main points per meeting. Label 1–3 words. Summary: 1–2 complete sentences, at most 35 words, stating what was decided or discussed.
 
@@ -38,7 +38,8 @@ Create exactly one edge per non-root node, from parent to child: {id: "<parentId
 
 STABILITY
 
-Use unique stable IDs within each array. Preserve every existing node, edge and task. Never change an existing node's id or parentId. When a topic is revisited, update its summary or importance under its existing id. Put a new detail under the existing main point it belongs to instead of creating a near-duplicate main point.
+Use unique stable IDs within each array. Preserve every existing node, edge and task. Never change an existing node's id or parentId.
+People can edit the map by hand: previousState may contain topics they renamed, moved, added (ids starting with "user-") or deleted. Treat previousState as the source of truth: keep their wording and placement, add new information around it, and don't recreate a topic that is no longer there unless it is clearly discussed again. When a topic is revisited, update its summary or importance under its existing id. Put a new detail under the existing main point it belongs to instead of creating a near-duplicate main point.
 
 CONTENT
 

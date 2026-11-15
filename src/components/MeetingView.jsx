@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import MindMap from './MindMap.jsx';
 import { mockMeeting } from '../shared/mockMeeting.js';
 
-export default function MeetingView({ state: liveState, onEdit: onLiveEdit }) {
+export default function MeetingView({ state: liveState, onEdit: onLiveEdit, onEditingChange, pendingCount = 0 }) {
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [showMap, setShowMap] = useState(true);
   // Dev helper: show the sample hackathon meeting instead of the live one.
@@ -27,7 +27,7 @@ export default function MeetingView({ state: liveState, onEdit: onLiveEdit }) {
         aria-controls="topic-view">
         {showMap ? 'Show topic list' : 'Show mind map'}
       </button>{' '}
-      <button type="button" onClick={() => { setShowSample(current => !current); setSelectedNodeId(null); }}>
+      <button type="button" onClick={() => { onEditingChange?.(false); setShowSample(current => !current); setSelectedNodeId(null); }}>
         {showSample ? 'Back to live meeting' : 'Load sample meeting'}
       </button>
       <div className="main-content-layout">
@@ -35,7 +35,9 @@ export default function MeetingView({ state: liveState, onEdit: onLiveEdit }) {
             {!nodes.length ? <p>No topics yet. Send a sample batch or enter test text below.</p> : (
                 showMap ? (
                     <div className="mindmap-frame">
-                        <MindMap nodes={nodes} edges={edges} selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} live={!showSample} onEdit={onEdit} />
+                        <MindMap nodes={nodes} edges={edges} selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} live={!showSample} onEdit={onEdit}
+                          onEditingChange={showSample ? undefined : onEditingChange}
+                          pendingCount={showSample ? 0 : pendingCount} />
                     </div>
                 ) : (
                     <ul className="topic-list">

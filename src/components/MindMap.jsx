@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ReactFlow, Background, Controls, Panel, useReactFlow } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './mindmap.css';
-import { moveNode, editNode, deleteNode, subtreeIds } from '../shared/mapEdits.js';
+import { moveNode, editNode, deleteNode, subtreeIds, moveOut, addNode } from '../shared/mapEdits.js';
 
 // Box sizes, matching mindmap.css. (Zoomed-in main point is 280 wide.)
 const BOX_WIDTH = { main: 240, point: 170, detail: 196 };
@@ -185,7 +185,10 @@ function AutoFit({ shape }) {
   return null;
 }
 
-export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNodeId, onSelectNode, live = true, onEdit }) {
+export default function MindMap({
+  nodes: allNodes, edges: allEdges, selectedNodeId, onSelectNode, live = true, onEdit,
+  onEditingChange, pendingCount = 0,
+}) {
   // focusId = the main point you clicked. null means "big picture".
   const [focusId, setFocusId] = useState(null);
   // mapStyle = 'tree', 'linear' or 'bubble'
@@ -203,6 +206,16 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
   const [editMessage, setEditMessage] = useState(null);   // "can't do that" messages
   const [measured, setMeasured] = useState({});            // id -> size React Flow measured
   const [editNotice, setEditNotice] = useState(null);     // "Moved X inside Y" messages
+  const [newTitle, setNewTitle] = useState('');            // "Add a topic inside" box
+  const dragStart = useRef(null);                          // where a dragged box started
+
+  // Tell the app when we're editing, so it pauses AI map updates (recording keeps going).
+  const editingChangeRef = useRef(onEditingChange);
+  editingChangeRef.current = onEditingChange;
+  useEffect(() => {
+    editingChangeRef.current?.(editMode);
+  }, [editMode]);
+  useEffect(() => () => editingChangeRef.current?.(false), []);   // leaving the map un-pauses
 
   // Run an edit (a function from src/shared/mapEdits.js). Shows a message if it's refused.
   function tryEdit(edit) {
@@ -362,8 +375,27 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
     }
   }
 
+  function handleNodeDragStart(event, node) {
+    dragStart.current = positions.get(node.id) ?? null;
+  }
+
   function handleNodeDragStop(event, node) {
-    if (dropTargetId) moveInto(node.id, dropTargetId);
+    const start = dragStart.current;
+    const end = dragPos?.id === node.id ? dragPos : null;
+    const movedFar = start && end && Math.hypot(end.x - start.x, end.y - start.y) > 80;
+    if (dropTargetId) {
+      moveInto(node.id, dropTargetId);            // dropped ON a box: goes inside it
+    } else if (movedFar) {
+      // dropped on EMPTY space: moves OUT one level (becomes a sibling of its parent)
+      const moved = allNodes.find(n => n.id === node.id);
+      const oldParent = allNodes.find(n => n.id === moved?.parentId);
+      const newParent = allNodes.find(n => n.id === oldParent?.parentId);
+      if (tryEdit(state => moveOut(state, node.id)) && newParent) {
+        setEditNotice(`Moved “${moved.label}” out of “${oldParent.label}”.`);
+        if (focusId === oldParent.id) setFocusId(newParent.parentId === null ? null : newParent.id);
+      }
+    }
+    dragStart.current = null;
     setDragPos(null);
     setDropTargetId(null);
   }
@@ -378,6 +410,16 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
     setDraft({ label: node.label, summary: node.summary });
     setConfirmDelete(false);
     setEditMessage(null);
+    setNewTitle('');
+  }
+
+  // Add a new topic inside the box that's open in the edit panel (title only).
+  function addInside(parent) {
+    if (tryEdit(state => addNode(state, parent.id, { label: newTitle }))) {
+      const hidden = !fullView && parent.id !== top;
+      setEditNotice(`Added “${newTitle.trim()}” inside “${parent.label}”.` + (hidden ? ` Open “${parent.label}” to see it.` : ''));
+      setNewTitle('');
+    }
   }
   const editingNode = editMode ? allNodes.find(node => node.id === editingId) : null;
   const editingBranchSize = editingNode ? subtreeIds({ nodes: allNodes }, editingNode.id).size - 1 : 0;
@@ -494,6 +536,7 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
         minZoom={0.1}
         defaultEdgeOptions={{ type: sides.edgeType }}
         onNodesChange={handleNodesChange}
+        onNodeDragStart={handleNodeDragStart}
         onNodeDragStop={handleNodeDragStop}
         onConnect={handleConnect}
         onNodeClick={handleNodeClick}
@@ -507,7 +550,13 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
                 ? <span className="edit-error">{editMessage}</span>
                 : editNotice
                   ? editNotice
-                  : 'Drag a box onto another to move it inside · Click a box to rename or delete'}
+                  : 'Drag onto a box to move it inside · Drag to empty space to move it out · Click a box to edit'}
+              {onEditingChange && (
+                <div className="edit-paused">
+                  Live map updates paused while you edit. Recording continues
+                  {pendingCount > 0 ? ` · ${pendingCount} new line${pendingCount === 1 ? '' : 's'} waiting` : ''}.
+                </div>
+              )}
             </div>
           </Panel>
         )}
@@ -560,6 +609,19 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
                   </div>
                 </div>
               )}
+              <div className="edit-add">
+                <label htmlFor="edit-node-add">Add a topic inside “{editingNode.label}”</label>
+                <div className="edit-add-row">
+                  <input
+                    id="edit-node-add"
+                    placeholder="Title (summary optional later)"
+                    value={newTitle}
+                    onChange={event => setNewTitle(event.target.value)}
+                    onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); addInside(editingNode); } }}
+                  />
+                  <button type="button" onClick={() => addInside(editingNode)}>Add</button>
+                </div>
+              </div>
             </form>
           </Panel>
         )}

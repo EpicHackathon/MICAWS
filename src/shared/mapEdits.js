@@ -72,6 +72,38 @@ export function editNode(state, id, { label, summary }) {
   };
 }
 
+// Move a node OUT of its parent: it becomes a sibling of its parent (one level up).
+export function moveOut(state, id) {
+  const nodes = byId(state);
+  const node = nodes.get(id);
+  if (!node) throw new Error('That topic no longer exists.');
+  if (node.parentId === null) throw new Error("The main idea can't be moved.");
+  const parent = nodes.get(node.parentId);
+  if (parent.parentId === null) throw new Error('This is already a main point, so it can’t go any higher.');
+  return moveNode(state, id, parent.parentId);
+}
+
+// Add a new topic inside parentId. Only a title is needed; the summary defaults to the title.
+export function addNode(state, parentId, { label, summary } = {}) {
+  const nodes = byId(state);
+  const parent = nodes.get(parentId);
+  const title = typeof label === 'string' ? label.trim() : '';
+  if (!parent) throw new Error('That topic no longer exists.');
+  if (!title) throw new Error('Give the new topic a title.');
+  if (levelOf(nodes, parentId) + 1 > MAX_LEVELS) throw new Error(`That would make the map deeper than ${MAX_LEVELS} levels.`);
+  let id;
+  do { id = 'user-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6); } while (nodes.has(id));
+  const node = {
+    id,
+    label: title,
+    summary: (typeof summary === 'string' && summary.trim()) || title,
+    importance: parent.parentId === null ? 4 : 2,   // only the main idea is 5
+    parentId,
+  };
+  const next = [...state.nodes, node];
+  return { ...state, nodes: next, edges: rebuildEdges(next) };
+}
+
 // Delete a node and everything under it.
 export function deleteNode(state, id) {
   const node = state.nodes.find(n => n.id === id);

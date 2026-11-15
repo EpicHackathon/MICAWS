@@ -14,7 +14,9 @@ import { demoBatches } from './shared/demo.js';
 export function MeetingResults({ segments, isRecording, clearTranscript, onManualSegment, retryTranscription, captureBusy, children }) {
   // The hook handles state updates based on incoming segments
   const [viewVersion, setViewVersion] = useState(0);
-  const processor = useMeetingProcessor(segments, isRecording);
+  // True while someone edits the live mind map: AI map updates wait, recording continues.
+  const [editingMap, setEditingMap] = useState(false);
+  const processor = useMeetingProcessor(segments, isRecording, undefined, { paused: editingMap });
   const { state, error, isProcessing, processPending, reset } = processor;
 
   function resetMeeting() {
@@ -36,7 +38,13 @@ export function MeetingResults({ segments, isRecording, clearTranscript, onManua
 
       {error && <p role="alert" className="error-message">Error: {error}</p>}
 
-      <MeetingView key={'view-' + viewVersion} state={state} onEdit={processor.applyEdit} />
+      <MeetingView
+        key={'view-' + viewVersion}
+        state={state}
+        onEdit={processor.applyEdit}
+        onEditingChange={setEditingMap}
+        pendingCount={processor.pendingCount}
+      />
       <ManualInput key={'input-' + viewVersion} disabled={captureBusy || isRecording || isProcessing || !onManualSegment} onSubmit={onManualSegment} />
     </>
   );
