@@ -190,7 +190,9 @@ export default function MindMap({
   onEditingChange, pendingCount = 0,
 }) {
   // focusId = the main point you clicked. null means "big picture".
-  const [focusId, setFocusId] = useState(null);
+  const [rawFocusId, setFocusId] = useState(null);
+  // If the AI merged away the topic you're zoomed into, fall back to the big picture.
+  const focusId = rawFocusId && allNodes.some(node => node.id === rawFocusId) ? rawFocusId : null;
   // mapStyle = 'tree', 'linear' or 'bubble'
   const [mapStyle, setMapStyle] = useState('tree');
   // showAll = full detail view: every level at once

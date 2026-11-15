@@ -4,9 +4,20 @@ import { emptyMeetingState } from '../shared/meetingSchema.js';
 
 // A failed AI map update retries by itself: wait 1s, then 2s, 4s... (then every 30s) until it works.
 const RETRY_DELAYS_MS = [1000, 2000, 4000, 8000, 15000, 30000];
+// locked: ids of topics people edited by hand; sent with every update so the AI leaves them alone.
 const freshMeeting = () => ({
   state: emptyMeetingState, cursor: 0, request: null, editsDuringRequest: [], failures: 0, retryTimer: null,
+  locked: new Set(),
 });
+
+// Topics an edit added, renamed, rewrote or moved.
+function changedIds(before, after) {
+  const old = new Map(before.nodes.map(node => [node.id, node]));
+  return after.nodes.filter(node => {
+    const prev = old.get(node.id);
+    return !prev || prev.label !== node.label || prev.summary !== node.summary || prev.parentId !== node.parentId;
+  }).map(node => node.id);
+}
 
 // paused: while someone is editing the map, hold AI map updates. Recording and the transcript
 // keep going; when paused turns off, everything said in the meantime is processed at once.
@@ -39,7 +50,7 @@ export function useMeetingProcessor(segments, isRecording, intervalMs = 10_000, 
       const next = await processTranscript(
         latest.current.segments.slice(current.cursor, end),
         current.state,
-        { signal: controller.signal },
+        { signal: controller.signal, lockedIds: [...current.locked] },
       );
       if (meeting.current !== current) return;
       // The AI answered based on the map from before any edits made meanwhile: replay them.
@@ -90,6 +101,7 @@ export function useMeetingProcessor(segments, isRecording, intervalMs = 10_000, 
   const applyEdit = useCallback(edit => {
     const current = meeting.current;
     const next = edit(current.state);   // throws -> caller shows the message
+    for (const id of changedIds(current.state, next)) current.locked.add(id);
     current.state = next;
     if (current.request) current.editsDuringRequest.push(edit);
     setState(next);

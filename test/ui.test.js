@@ -4,6 +4,7 @@ import { JSDOM } from 'jsdom';
 import React, { act } from 'react';
 import { createServer } from 'vite';
 import { createHandler } from '../api/process.js';
+import { createSummaryHandler } from '../api/summary.js';
 
 test('typed input, details navigation, view toggle and reset work through the app', async t => {
   const dom = new JSDOM('<div id="root"></div>', { url: 'http://localhost/?dev' });   // ?dev shows the test-text box
@@ -22,9 +23,15 @@ test('typed input, details navigation, view toggle and reset work through the ap
   expose('IS_REACT_ACT_ENVIRONMENT', true);
   dom.window.confirm = () => true;
   const handler = createHandler({ env: { MEETING_MOCK: 'true' } });
+  const summaryHandler = createSummaryHandler({ env: { MEETING_MOCK: 'true' } });
+  const summaryRequests = [];
   const requests = [];
   let failNext = true;
   t.mock.method(globalThis, 'fetch', async (url, options) => {
+    if (url === '/api/summary') {   // end-of-meeting summary
+      summaryRequests.push(JSON.parse(options.body));
+      return summaryHandler(new Request('http://localhost' + url, options));
+    }
     requests.push(JSON.parse(options.body));
     if (failNext) {
       failNext = false;
@@ -73,6 +80,11 @@ test('typed input, details navigation, view toggle and reset work through the ap
       await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
     }
     assert.equal(topicCount(), 2, document.body.textContent);
+    // not recording + map caught up -> end-of-meeting summary
+    for (let attempt = 0; attempt < 400 && !document.querySelector('.summary-overview'); attempt++) {
+      await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
+    }
+    assert.ok(document.querySelector('[aria-label="Meeting summary"]').textContent.includes('Mock Meeting'));
     // the topic list and its details panel are gone: the mind map is the only view
     assert.equal(button('Show topic list'), undefined);
     assert.equal(document.querySelector('[aria-label="Node details"]'), null);

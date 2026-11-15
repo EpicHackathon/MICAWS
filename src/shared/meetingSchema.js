@@ -76,6 +76,8 @@ export const requestSchema = z.strictObject({
     time: z.number().nonnegative(), speaker: z.string().nullable(), text: z.string(),
   })),
   previousState: meetingSchema,
+  // Topics people edited by hand (renamed/moved/added). The AI must not move, rename or delete them.
+  lockedIds: z.array(z.string()).optional(),
 });
 
 export const emptyMeetingState = { nodes: [], edges: [], actionItems: [] };

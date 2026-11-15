@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { formatTime } from '../shared/formatTime.js';
 
 // Live transcript in the side panel. Scrolls on its own and follows the newest line,
 // unless you've scrolled up to reread something (then it leaves you where you are).
@@ -33,7 +34,7 @@ export default function TranscriptPanel({ segments = [], isRecording = false }) 
         ) : (
           segments.map((segment, index) => (
             <p key={index} className="transcript-line">
-              <span className="transcript-time">{Number(segment.time).toFixed(1)}s</span>{' '}
+              <span className="transcript-time">{formatTime(segment.time)}</span>{' '}
               {segment.speaker && <strong className="transcript-speaker">{segment.speaker}: </strong>}
               {segment.text}
             </p>

@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite';
 import { createHandler } from './api/process.js';
+import { createSummaryHandler } from './api/summary.js';
 
 export default defineConfig(({ mode }) => {
   const env = { ...loadEnv(mode, process.cwd(), ''), ...process.env };
@@ -26,11 +27,14 @@ export default defineConfig(({ mode }) => {
     plugins: [{
       name: 'local-meeting-api',
       configureServer(server) {
-        const handle = createHandler({ env });
+        // /api/process = mind map updates, /api/summary = end-of-meeting summary
+        const handlers = { '/api/process': createHandler({ env }), '/api/summary': createSummaryHandler({ env }) };
         server.middlewares.use(async (req, res, next) => {
-          if (req.url?.split('?')[0] !== '/api/process') return next();
+          const path = req.url?.split('?')[0];
+          const handle = handlers[path];
+          if (!handle) return next();
           try {
-            const request = new Request('http://localhost/api/process', req.method === 'POST'
+            const request = new Request('http://localhost' + path, req.method === 'POST'
               ? { method: 'POST', body: req, duplex: 'half' }
               : { method: req.method });
             const response = await handle(request);

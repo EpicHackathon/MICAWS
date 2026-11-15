@@ -4,6 +4,7 @@ import { JSDOM } from 'jsdom';
 import React, { act } from 'react';
 import { createServer } from 'vite';
 import { createHandler } from '../api/process.js';
+import { createSummaryHandler } from '../api/summary.js';
 import { installAudioMocks } from './helpers/audio.js';
 
 test('recording hook and App handle permissions, transcription retries, processing retries and reset', async t => {
@@ -24,9 +25,15 @@ test('recording hook and App handle permissions, transcription retries, processi
   dom.window.confirm = () => true;
   const audio = installAudioMocks(t);
   const handler = createHandler({ env: { MEETING_MOCK: 'true' } });
+  const summaryHandler = createSummaryHandler({ env: { MEETING_MOCK: 'true' } });
+  const summaryRequests = [];
   const transcriptions = [], requests = [];
   let failTranscription = true, failProcessor = true, holdTranscription = false, finishTranscription;
   t.mock.method(globalThis, 'fetch', async (url, options) => {
+    if (url === '/api/summary') {   // end-of-meeting summary
+      summaryRequests.push(JSON.parse(options.body));
+      return summaryHandler(new Request('http://localhost' + url, options));
+    }
     if (url === '/api/transcribe') {
       transcriptions.push(options);
       if (holdTranscription) return new Promise(resolve => { finishTranscription = resolve; });
@@ -101,9 +108,13 @@ test('recording hook and App handle permissions, transcription retries, processi
     await until(() => document.body.textContent.includes('AI temporarily unavailable'));
     assert.equal(transcriptions[0].body.get('chunk_id'), transcriptions[1].body.get('chunk_id'));
     assert.deepEqual(requests[0].newSegments, [{ time: 0, speaker: null, text: 'We agreed to launch next week.' }]);
-    assert.ok(document.querySelector('[aria-label="Transcript"]').textContent.includes('0.0s'));
+    assert.ok(document.querySelector('[aria-label="Transcript"]').textContent.includes('0:00'));   // times show as minutes:seconds
     assert.ok(document.body.textContent.includes('Retrying automatically'));   // the AI update retries by itself too
     await until(() => document.querySelector('[data-topic-count]')?.dataset.topicCount === '2');
+    // recording stopped + map caught up -> the end-of-meeting summary is written
+    await until(() => document.querySelector('[aria-label="Meeting summary"] .summary-overview'));
+    assert.equal(summaryRequests.length, 1);
+    assert.equal(summaryRequests[0].segments.length, 1);
     assert.deepEqual(requests[1], requests[0]);
 
     await click(startLabel);
@@ -129,6 +140,7 @@ test('recording hook and App handle permissions, transcription retries, processi
     assert.equal(document.querySelector('[aria-label="Transcript"]'), null);
     assert.ok(document.body.textContent.includes('No topics yet.'));
     assert.equal(button(startLabel).disabled, false);
+    assert.equal(document.querySelector('[aria-label="Meeting summary"]'), null);   // reset clears it
     assert.equal(requests.length, 3);
   } finally {
     await act(async () => root.unmount());

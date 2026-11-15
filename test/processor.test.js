@@ -189,7 +189,9 @@ test('mock preserves every parent between updates', async () => {
   }
 });
 
-test('server rejects a valid tree that changes an existing parent', async () => {
+// The AI may now move/merge topics it made itself (see test/merging.test.js),
+// but never a topic a person edited (lockedIds).
+test('server rejects a valid tree that moves a hand-edited (locked) topic', async () => {
   const previous = detailState();
   const next = structuredClone(previous);
   next.nodes[2].parentId = 'launch';
@@ -198,7 +200,11 @@ test('server rejects a valid tree that changes an existing parent', async () => 
   const handler = createHandler({
     env: { GEMINI_API_KEY: 'test-only' }, generateText: async () => JSON.stringify(next),
   });
-  assert.equal((await send(handler, demoBatches[2], previous)).status, 502);
+  const response = await handler(new Request('http://localhost/api/process', {
+    method: 'POST',
+    body: JSON.stringify({ newSegments: demoBatches[2], previousState: previous, lockedIds: ['campaign-detail'] }),
+  }));
+  assert.equal(response.status, 502);
 });
 
 test('manual text in mock mode produces a valid quoted topic without invented tasks', async () => {

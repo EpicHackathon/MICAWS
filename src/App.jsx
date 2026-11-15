@@ -1,6 +1,7 @@
 import { useMicrophone } from './hooks/useMicrophone.js';
 import React, { useState, useRef, useEffect } from 'react';
 import { useMeetingProcessor } from './hooks/useMeetingProcessor.js';
+import { useMeetingSummary } from './hooks/useMeetingSummary.js';
 import MeetingView from './components/MeetingView.jsx';
 import MicIcon from './components/MicIcon.jsx';
 import StopIcon from './components/StopIcon.jsx';
@@ -19,10 +20,14 @@ export function MeetingResults({ segments, isRecording, clearTranscript, onManua
   const processor = useMeetingProcessor(segments, isRecording, undefined, { paused: editingMap });
   // Failed transcription / AI updates retry by themselves (no retry button needed).
   const { state, error, isProcessing, reset } = processor;
+  // End-of-meeting summary: written once recording has stopped and the mind map has caught up.
+  const summaryReady = !isRecording && !captureBusy && !isProcessing && !editingMap && processor.pendingCount === 0;
+  const meetingSummary = useMeetingSummary(segments, state, summaryReady);
 
   function resetMeeting() {
     if (clearTranscript() !== false) {
       reset();
+      meetingSummary.reset();
       setViewVersion(current => current + 1);
     }
   }
@@ -45,6 +50,7 @@ export function MeetingResults({ segments, isRecording, clearTranscript, onManua
         segments={segments}
         isRecording={isRecording}
         devMode={devMode}
+        summary={meetingSummary.summary}
       />
       {devMode && (
         <ManualInput key={'input-' + viewVersion} disabled={captureBusy || isRecording || isProcessing || !onManualSegment} onSubmit={onManualSegment} />

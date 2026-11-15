@@ -120,6 +120,44 @@
   color: var(--color-text-muted, #7a6f64);
 }
 
+/* End-of-meeting summary card */
+.meeting-summary {
+  margin-top: 20px;
+  padding: 16px 20px;
+  border: 1px solid var(--color-border, #e5e0d8);
+  border-left: 4px solid var(--color-accent, #8b7355);
+  border-radius: 12px;
+  background: var(--color-bg-card, #fff);
+  box-shadow: var(--shadow-sm, none);
+}
+.meeting-summary h2 {
+  margin-top: 0;
+}
+.summary-overview {
+  color: var(--color-text, #4a3e32);
+}
+.summary-points {
+  margin: 10px 0 0;
+}
+.summary-points li {
+  position: relative;
+  padding-left: 18px;
+  color: var(--color-text, #4a3e32);
+}
+.summary-points li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 16px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-text-muted, #7a6f64);
+}
+.summary-status {
+  font-style: italic;
+}
+
 /* Meeting action items:a small accent marker (Honey in Warm, Steel in Neutral) */
 .action-items li {
   position: relative;
