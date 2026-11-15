@@ -146,3 +146,91 @@ test('stop requests a tail flush once and waits for its transcription', async t 
   assert.equal(transcripts.length, 1);
   assert.deepEqual(statuses, ['transcribing', 'idle']);
 });
+
+test('permission denial returns to idle and closes the audio context', async t => {
+  const { installAudioMocks } = await import('./helpers/audio.js');
+  const { contexts } = installAudioMocks(t, {
+    getUserMedia: async () => { throw new Error('Permission denied'); },
+  });
+  const { recorder, errors, statuses } = session();
+  await recorder.start();
+  assert.deepEqual(statuses, ['starting', 'idle']);
+  assert.match(errors[0], /Permission denied/);
+  assert.equal(contexts[0].state, 'closed');
+});
+
+test('worklet startup failure releases the granted microphone', async t => {
+  const { installAudioMocks } = await import('./helpers/audio.js');
+  const { contexts, tracks } = installAudioMocks(t, {
+    addModule: async () => { throw new Error('Worklet failed'); },
+  });
+  const { recorder, statuses } = session();
+  await recorder.start();
+  assert.equal(statuses.at(-1), 'idle');
+  assert.ok(tracks[0].stops > 0);
+  assert.equal(contexts[0].state, 'closed');
+});
+
+test('reset during permission prompt releases a late microphone grant', async t => {
+  const { installAudioMocks } = await import('./helpers/audio.js');
+  let grant;
+  const track = { stopped: false, stop() { this.stopped = true; } };
+  installAudioMocks(t, { getUserMedia: () => new Promise(resolve => { grant = resolve; }) });
+  const { recorder, statuses } = session();
+  const starting = recorder.start();
+  await tick();
+  recorder.cancel();
+  grant({ getTracks: () => [track] });
+  await starting;
+  assert.equal(track.stopped, true);
+  assert.deepEqual(statuses, ['starting']);
+});
+
+test('malformed transcription items produce the validation error', async t => {
+  const { transcribeAudio } = await import('../src/services/transcribeAudio.js');
+  for (const item of [null, 42, { start: 0, end: 1, text: 'hello' }]) {
+    t.mock.method(globalThis, 'fetch', async () => Response.json([item]));
+    await assert.rejects(transcribeAudio(new Blob(['audio'])), /invalid response/);
+    t.mock.restoreAll();
+  }
+});
+
+test('stop cannot wait forever for an unresponsive worklet', async t => {
+  const { installAudioMocks } = await import('./helpers/audio.js');
+  const { contexts, tracks } = installAudioMocks(t);
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { recorder, statuses, errors } = session();
+  await recorder.start();
+  recorder.stop();
+  assert.ok(tracks[0].stops > 0);
+  t.mock.timers.tick(5000);
+  await tick();
+  assert.equal(statuses.at(-1), 'idle');
+  assert.equal(contexts[0].state, 'closed');
+  assert.match(errors.at(-1), /final audio chunk/);
+});
+
+test('unsupported microphone APIs return an actionable error', async t => {
+  const { installAudioMocks } = await import('./helpers/audio.js');
+  installAudioMocks(t);
+  delete globalThis.AudioWorkletNode;
+  const { recorder, statuses, errors } = session();
+  await recorder.start();
+  assert.deepEqual(statuses, ['starting', 'idle']);
+  assert.match(errors[0], /supported browser/);
+});
+
+test('reset cancels the stop watchdog and ignores late tail audio', async t => {
+  const { installAudioMocks } = await import('./helpers/audio.js');
+  const { nodes } = installAudioMocks(t);
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { recorder, errors, transcripts } = session();
+  await recorder.start();
+  recorder.stop();
+  recorder.cancel();
+  nodes[0].emit(chunk());
+  t.mock.timers.tick(5000);
+  assert.deepEqual(errors, []);
+  assert.deepEqual(transcripts, []);
+  assert.equal(recorder.queue.length, 0);
+});

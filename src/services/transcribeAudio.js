@@ -20,7 +20,7 @@ export async function transcribeAudio(audio, signal, { chunkId = crypto.randomUU
       ? result.detail : `Transcription failed (HTTP ${response.status}). Check the Python server.`);
   }
   if (!Array.isArray(result) || !result.every(segment =>
-    typeof segment.text === 'string' && Number.isFinite(segment.start) && segment.start >= 0
+    segment !== null && typeof segment === 'object' && typeof segment.text === 'string' && Number.isFinite(segment.start) && segment.start >= 0
     && Number.isFinite(segment.end) && segment.end >= segment.start
     && (segment.speaker === null || typeof segment.speaker === 'string'))) {
     throw new Error('The transcription server returned an invalid response.');

@@ -1,4 +1,4 @@
-﻿import { useMicrophone } from './hooks/useMicrophone.js';
+import { useMicrophone } from './hooks/useMicrophone.js';
 import React, { useState, useRef, useEffect } from 'react';
 import { useMeetingProcessor } from './hooks/useMeetingProcessor.js';
 import MeetingView from './components/MeetingView.jsx';
@@ -88,7 +88,7 @@ export default function App() {
           )}
         </div>
         <p className="app-status">
-          Status: {isRecording ? '🔴 Live recording in progress...' : '🟢 Ready. Click Start to begin session capture.'}
+          Status: {{ idle: 'Ready to record.', starting: 'Waiting for microphone permission…', recording: 'Live recording in progress…', transcribing: 'Finishing pending transcription…' }[microphone.status]}
         </p>
         <div className="theme-switch" role="group" aria-label="Color theme">
           <button type="button" data-active={theme === 'neutral'} onClick={() => setTheme('neutral')}>Neutral</button>

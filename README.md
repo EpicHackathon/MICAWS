@@ -149,7 +149,7 @@ Expand Dev tools — test text, enter a statement, and choose Send test text. Bl
 
 With MEETING_MOCK=true, arbitrary text appears verbatim as a quoted mock topic. This verifies the request and display flow without an API key. With MEETING_MOCK=false, Gemini analyzes the text using the configured server-side key. Sample batches and typed text can be used in the same mock session.
 
-The voice recording controls are an existing prototype and were excluded from this revision. Test this revision using the sample buttons and typed text.
+Voice recording uses the microphone hook and AudioWorklet chunk capture. The sample buttons and typed input also let you test the meeting UI independently of microphone hardware.
 
 The automated UI test uses jsdom to exercise typed submission, a failed request and retry, view switching, details navigation, and reset confirmation. React Flow can emit layout/style warnings in this simulated environment because it does not calculate browser layout. Check the visual map in a browser when reviewing styling changes.
 
@@ -174,3 +174,11 @@ Stop the project with `docker compose down`. Local environment files are exclude
 
 This merged version captures microphone audio in 10-second chunks and updates the transcript and meeting state while recording. See LIVE_TRANSCRIPTION.md for startup instructions and limitations. Main's map styles, focus navigation, manual input, sample meetings, and Docker files are preserved. Run the Python transcription server separately from Vite; the existing Docker Compose configuration does not start WhisperX.
 
+
+## Automated recording checks
+
+Run `npm.cmd test` to exercise recording without a real microphone, audio file, Python service, or Gemini key. The audio doubles emulate AudioContext, AudioWorkletNode, microphone permission, and transcription responses.
+
+The recording integration test mounts the actual App and microphone hook. It verifies start/stop controls, timestamp conversion, accumulation across recordings, transcription and processing retries, and reset while transcription is pending. Lower-level tests cover WAV chunks, permission denial, unsupported APIs, worklet startup failure, delayed microphone permission, malformed responses, and stop timeouts.
+
+If the audio worklet cannot acknowledge stop within five seconds, capture resources are released and a visible message explains that the final chunk could not be recovered. Previously queued audio can still complete or be retried. These automated checks validate lifecycle and data flow; actual recognition accuracy and microphone hardware still require a live test.

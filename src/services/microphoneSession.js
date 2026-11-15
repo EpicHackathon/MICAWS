@@ -67,7 +67,7 @@ export class MicrophoneSession {
   }
 
   receive(data) {
-    if (this.cancelled) return;
+    if (this.cancelled || this.captureDone) return;
     if (data.type === 'stopped') {
       this.captureDone = true;
       this.release();
@@ -118,6 +118,14 @@ export class MicrophoneSession {
     if (this.stopping || this.cancelled || !this.node) return;
     this.stopping = true;
     this.onStatus('transcribing');
+    // A suspended or failed worklet may never acknowledge the final flush.
+    this.stopTimer = setTimeout(() => {
+      if (this.cancelled || this.captureDone) return;
+      this.captureDone = true;
+      this.release();
+      this.onError('The final audio chunk could not be recovered. Earlier audio is retained; use Process pending / retry if transcription failed.');
+      void this.drain();
+    }, 5000);
     this.node.port.postMessage('stop');
     this.stream.getTracks().forEach(track => track.stop());
   }
@@ -130,6 +138,7 @@ export class MicrophoneSession {
   }
 
   release() {
+    clearTimeout(this.stopTimer);
     if (this.context) this.context.onstatechange = null;
     this.stream?.getTracks().forEach(track => track.stop());
     this.source?.disconnect();
