@@ -61,8 +61,8 @@ test('recording hook and App handle permissions, transcription retries, processi
     }
     assert.ok(predicate(), document.body.textContent);
   }
-  const startLabel = '🎤 Start Recording';
-  const stopLabel = '🛑 Stop & Process Stream';
+  const startLabel = 'Start Recording';   // mic is now an SVG icon, not an emoji
+  const stopLabel = 'Stop & Process Stream';   // stop is now an SVG icon, not an emoji
   const emit = async (node, data) => act(async () => node.emit(data));
   const chunk = { type: 'chunk', startSample: 0, samples: new Float32Array(16000), sampleRate: 16000 };
   try {

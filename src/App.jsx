@@ -2,6 +2,8 @@ import { useMicrophone } from './hooks/useMicrophone.js';
 import React, { useState, useRef, useEffect } from 'react';
 import { useMeetingProcessor } from './hooks/useMeetingProcessor.js';
 import MeetingView from './components/MeetingView.jsx';
+import MicIcon from './components/MicIcon.jsx';
+import StopIcon from './components/StopIcon.jsx';
 import ManualInput from './components/ManualInput.jsx';
 import { demoBatches } from './shared/demo.js';
 
@@ -100,10 +102,10 @@ export default function App() {
       {/* CONTROL PANEL */}
       <div className="control-panel">
         <button className="btn-primary" onClick={startRecording} disabled={busy}>
-          🎤 Start Recording
+          <MicIcon />Start Recording
         </button>
         <button className="btn-secondary" onClick={stopRecording} disabled={!isRecording}>
-          🛑 Stop & Process Stream
+          <StopIcon color="#ffffff" />Stop & Process Stream
         </button>
       </div>
 
