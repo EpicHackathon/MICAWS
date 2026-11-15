@@ -13,6 +13,16 @@ services:
       - ./vite.config.js:/app/vite.config.js:ro
     environment:
       - CHOKIDAR_USEPOLLING=true
+      - TRANSCRIPTION_URL=http://transcription:8000
+
+  transcription:
+    build:
+      context: .
+      dockerfile: Dockerfile.transcription
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - whisperx-cache:/root/.cache
 
   diart:
     build:
@@ -28,3 +38,4 @@ services:
 
 volumes:
   huggingface-cache:
+  whisperx-cache:
