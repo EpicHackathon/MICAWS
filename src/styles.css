@@ -1,4 +1,4 @@
-﻿/* ========================================= */
+/* ========================================= */
 /* COSY NEUTRAL STYLESHEET                   */
 /* Themeable: neutral / warm / cool          */
 /* ========================================= */
@@ -125,6 +125,21 @@ body {
   --node-summary: #8a97a0;
 }
 /* ---- Layout ---- */
+
+/* Main content wrapper for two-column layouts (e.g., Transcript sidebar) */
+.main-content-layout {
+    display: grid;
+    grid-template-columns: 3fr 1fr; /* Adjust ratio as needed: Content | Sidebar */
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+@media (max-width: 900px) {
+    .main-content-layout {
+        grid-template-columns: 1fr; /* Stack on smaller screens */
+        gap: 1.5rem;
+    }
+}
 .app-container {
     max-width: 960px;
     margin: 0 auto;

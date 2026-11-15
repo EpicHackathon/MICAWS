@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import MindMap from './MindMap.jsx';
 import { mockMeeting } from '../shared/mockMeeting.js';
 
@@ -23,7 +23,36 @@ export default function MeetingView({ state: liveState }) {
       <button type="button" onClick={() => { setShowSample(current => !current); setSelectedNodeId(null); }}>
         {showSample ? 'Back to live meeting' : 'Load sample meeting'}
       </button>
-      <div id="topic-view">
+      <div className="main-content-layout">
+        <div className="main-content-area">
+            {!nodes.length ? <p>No topics yet. Send a sample batch or enter test text below.</p> : (
+                showMap ? (
+                    <div className="mindmap-frame">
+                        <MindMap nodes={nodes} edges={edges} selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} />
+                    </div>
+                ) : (
+                    <ul className="topic-list">
+                        {nodes.map(node => (
+                            <li key={node.id}>
+                                <button type="button" onClick={() => setSelectedNodeId(node.id)} aria-pressed={selectedNodeId === node.id}>
+                                    {node.label} ({node.importance}/5)
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                )
+            )}
+        </div>
+        <aside className="transcript-sidebar">
+             {/* Placeholder for Transcript/Live Output Stream */}
+             <h3>Transcript Stream</h3>
+             {/* This area will now be constrained by the sidebar layout and should contain the transcript component. */}
+             <div className="live-transcript-box" style={{ minHeight: '100%' }}>
+                <!-- Actual transcript rendering logic goes here -->
+                <p>Live Transcript Feed...</p>
+             </div>
+        </aside>
+    </div>
         {!nodes.length ? <p>No topics yet. Send a sample batch or enter test text below.</p> :
           showMap ? (
             <div className="mindmap-frame">
