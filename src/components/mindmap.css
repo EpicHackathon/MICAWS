@@ -140,7 +140,7 @@
 /* DETAIL (A2): pill with title + 2-line summary, thin border, light fill */
 .mindmap .react-flow__node.shape-detail {
   width: 196px;
-  border-radius: 999px;
+  border-radius: 30px;         /* soft pill ends; stays rounder than main points (14px) even when tall */
   border: 1px solid var(--detail-border);
   background: var(--detail-fill);
   color: var(--text);
@@ -158,11 +158,55 @@
   font-size: 11.5px;
   color: var(--summary);
   line-height: 1.35;
-  /* cut off after 2 lines with "..." so pills never get tall */
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  /* full text, never cut off: the pill grows taller instead */
+}
+
+/* A detail that has its own sub-details: you can click it to go deeper */
+.mindmap .react-flow__node.shape-detail.has-kids {
+  cursor: pointer;
+}
+.mindmap .react-flow__node.shape-detail.has-kids:hover {
+  border-color: var(--hover-border);
+}
+.more-count {
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--summary);
+}
+
+/* A DETAIL you zoomed into (deeper levels): wide card, keeps its soft pill corners */
+.mindmap .react-flow__node.shape-detail.is-focus {
+  width: 280px;
+  text-align: left;
+  padding: 14px 22px;
+  cursor: default;
+  border-color: var(--hover-border);
+}
+
+/* ---- Back button + path (top-left, only when zoomed in) ---- */
+.map-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(60vw, 520px);
+  font: 500 13px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--switch-text);
+}
+.map-breadcrumb button {
+  border: 1px solid var(--color-border, transparent);
+  background: var(--switch-bg);
+  color: var(--switch-text-active);
+  padding: 7px 12px;
+  border-radius: 10px;
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.map-breadcrumb .path {
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ---- UNREAD DOT: topic got new info nobody has looked at yet ---- */

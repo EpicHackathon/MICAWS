@@ -25,13 +25,13 @@ function getLevel(node, mainIdea) {
 // Rough height of a box, worked out from how much text it has (box widths are fixed,
 // so longer text = more lines = taller box). Used so boxes never overlap.
 // Slightly over-estimates on purpose: a little extra gap is better than touching boxes.
-function estimateHeight(node, level, isFocus) {
+function estimateHeight(node, level, isFocus, hasKids = false) {
   const lines = (text, charsPerLine) => Math.max(1, Math.ceil((text ?? '').length / charsPerLine));
   if (isFocus) return 34 + lines(node.label, 24) * 22 + 6 + lines(node.summary, 37) * 19;
   if (level === 'main') return 37 + lines(node.label, 19) * 22;
   if (level === 'point') return 27 + lines(node.label, 16) * 19;
-  // detail pill: title (up to 2 lines) + summary (cut off at 2 lines)
-  return 24 + Math.min(2, lines(node.label, 19)) * 17 + 2 + Math.min(2, lines(node.summary, 24)) * 16;
+  // detail pill: title + FULL summary (never cut off), + a "N more" line if it has sub-details
+  return 24 + lines(node.label, 19) * 17 + 2 + lines(node.summary, 24) * 16 + (hasKids ? 18 : 0);
 }
 
 // Which side of the box do the lines connect to?
@@ -201,13 +201,18 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
   const visibleIds = new Set(nodes.map(node => node.id));
   const edges = allEdges.filter(edge => visibleIds.has(edge.source) && visibleIds.has(edge.target));
 
+  // Does this box have children (anywhere in the meeting)? Those can be clicked to go deeper.
+  const hasKids = id => allNodes.some(node => node.parentId === id);
+  // In the normal (not Show all) view, details with hidden sub-details say "N more".
+  const hiddenKidCount = id => fullView ? 0 : allNodes.filter(node => node.parentId === id).length;
+
   // Size of every visible box (see estimateHeight).
   const size = new Map(nodes.map(node => {
     const isFocus = node.id === focusId;
     const level = getLevel(node, mainIdea);
     return [node.id, {
       width: isFocus ? FOCUS_WIDTH : BOX_WIDTH[level],
-      height: estimateHeight(node, level, isFocus),
+      height: estimateHeight(node, level, isFocus, level === 'detail' && hiddenKidCount(node.id) > 0),
     }];
   }));
   const kidsOf = id => nodes.filter(node => node.parentId === id);
@@ -221,21 +226,27 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
     const isFocus = node.id === focusId;   // the main point you zoomed into
 
     // Zoomed-in main point shows its summary under the title. Everything else: just the label.
+    const more = level === 'detail' && !isFocus ? hiddenKidCount(node.id) : 0;
     const label = isFocus
       ? <><div className="node-title">{node.label}</div><div className="node-summary">{node.summary}</div></>
       : level === 'detail'
-        // A2 "peek line": detail pill shows its title + one short line from its summary
-        ? <><div className="detail-title">{node.label}</div><div className="detail-summary" title={node.summary}>{node.summary}</div></>
+        // detail pill: title + its FULL summary (+ "N more ›" if it has sub-details to click into)
+        ? <>
+            <div className="detail-title">{node.label}</div>
+            <div className="detail-summary">{node.summary}</div>
+            {more > 0 && <div className="more-count">{more} more ›</div>}
+          </>
         : node.label;
 
     // Dot only on main points (not while you're zoomed into it).
     const hasUnread = level === 'point' && !isFocus && unread.has(node.id);
+    const clickable = !isFocus && hasKids(node.id) && level !== 'main';
 
     return {
       id: node.id,
       position: positions.get(node.id) ?? { x: 0, y: 0 },
       data: { label },
-      className: `shape-${level}${isFocus ? ' is-focus' : ''}${hasUnread ? ' has-unread' : ''}`,   // <- picks the shape
+      className: `shape-${level}${isFocus ? ' is-focus' : ''}${hasUnread ? ' has-unread' : ''}${clickable && level === 'detail' ? ' has-kids' : ''}`,   // <- picks the shape
       selected: node.id === selectedNodeId,                         // Micah: highlight the box shown in the details panel
       ariaLabel: node.label + (hasUnread ? ', has new updates' : '') + ', importance ' + node.importance + ' out of 5. Select for details.',
       sourcePosition: sides.source,
@@ -243,23 +254,37 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
     };
   });
 
-  // Click a main point -> zoom in on it (also from the Show all view).
+  // Click a box that has children -> zoom in on it (main points AND deeper details).
+  // Keep clicking to keep going deeper. Works from the Show all view too.
   function handleNodeClick(event, node) {
     const clicked = allNodes.find(n => n.id === node.id);
-    // Team design: clicking a main point zooms in (summary shows inside the box).
     // Micah's details panel still opens from the topic list view.
-    if (clicked.parentId === mainIdea?.id) {
+    if (clicked.parentId !== null && clicked.id !== focusId && hasKids(clicked.id)) {
       setFocusId(clicked.id);
       setShowAll(false);
     }
     markRead([clicked.id]);   // you looked at it, so its dot goes away
   }
 
-  // Click empty space -> back to the big picture (does nothing in Show all).
-  // Leaving a zoomed-in point counts as having seen its details.
+  // Go up ONE level: from a sub-detail back to its detail, from a main point back to the big picture.
+  function goUp() {
+    if (!focusId) return;
+    markRead([focusId]);
+    const parentId = allNodes.find(node => node.id === focusId)?.parentId;
+    setFocusId(parentId && parentId !== mainIdea?.id ? parentId : null);
+  }
+
+  // Click empty space -> up one level (does nothing in the big picture / Show all).
   function handlePaneClick() {
-    if (focusId) markRead([focusId]);
-    setFocusId(null);
+    goUp();
+  }
+
+  // Path from the main idea down to where you are, e.g. "Hackathon Plan › Tech Stack › OpenAI"
+  const path = [];
+  for (let id = focusId; id; id = allNodes.find(node => node.id === id)?.parentId) {
+    const node = allNodes.find(n => n.id === id);
+    if (!node) break;
+    path.unshift(node.label);
   }
 
   // Show all on/off. Turning it on from a zoomed-in point goes back out first.
@@ -289,6 +314,14 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
         onNodeClick={handleNodeClick}
         onPaneClick={handlePaneClick}
       >
+        {focusId && (
+          <Panel position="top-left">
+            <div className="map-breadcrumb">
+              <button type="button" onClick={goUp}>← Back</button>
+              <span className="path" title={path.join(' › ')}>{path.join(' › ')}</span>
+            </div>
+          </Panel>
+        )}
         <Panel position="top-right">
           <div className="map-controls">
             <button

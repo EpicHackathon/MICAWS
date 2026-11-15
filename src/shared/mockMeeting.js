@@ -54,6 +54,13 @@ export const mockMeeting = {
 
     // Details: Quiz Study Plan
     node('quiz-sunday', 'Sunday evening', 'After the hackathon.', 1, 'quiz'),
+
+    // Level 4: sub-details (click a detail that says "N more ›" to go deeper)
+    node('openai-whisper', 'Whisper: speech to text', 'Turns the meeting audio into a transcript with timestamps for each segment.', 2, 'stack-openai'),
+    node('openai-gpt', 'GPT: builds the map', 'Reads the transcript and returns the topics, details and tasks as structured JSON.', 2, 'stack-openai'),
+    node('rikki-shapes', 'Shapes + colors', 'Squared-off main idea, rounded main points, pill-shaped details, and the Cottage warmth sepia palette.', 2, 'roles-rikki'),
+    node('rikki-views', 'Tree, Linear, Bubble', 'Three map styles, plus a Show all view that displays every level at once.', 2, 'roles-rikki'),
+    node('demo-dryrun', 'Dry run at 11 AM', 'Practice the whole demo once before judging starts so nothing surprises us.', 1, 'time-demo'),
   ],
   edges: [],
   actionItems: [
