@@ -115,7 +115,7 @@ export default function App() {
           <MicIcon />Start Recording
         </button>
         <button className="btn-secondary" onClick={stopRecording} disabled={!isRecording}>
-          <StopIcon color="#ffffff" />Stop & Process Stream
+          <StopIcon />Stop & Process Stream
         </button>
       </div>
 

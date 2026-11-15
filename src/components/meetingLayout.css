@@ -101,7 +101,23 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #B4533C;
+  background: var(--color-recording, #B4533C);
+}
+
+/* Meeting action items: a small accent marker (Honey in Warm, Steel in Neutral) */
+.action-items li {
+  position: relative;
+  padding-left: 18px;
+}
+.action-items li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 15px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--color-action, var(--color-accent));
 }
 .transcript-scroll {
   flex: 1 1 auto;

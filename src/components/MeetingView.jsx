@@ -139,7 +139,7 @@ export default function MeetingView({
         </section>
       )}
       <h2>Meeting action items ({actionItems.length})</h2>
-      {actionItems.length ? <ul>{actionItems.map(item => <li key={item.id}>{item.text}</li>)}</ul>
+      {actionItems.length ? <ul className="action-items">{actionItems.map(item => <li key={item.id}>{item.text}</li>)}</ul>
         : <p>No action items yet.</p>}
       <details>
         <summary>Connections ({edges.length})</summary>

@@ -2,24 +2,59 @@
    MIND MAP STYLES
    - Shapes + behavior (squared-off main idea, rounded main points,
      A2 detail pills, red unread dot) are the SAME in every theme.
-   - Colors: our "Cottage warmth" sepia palette is the BASE (default)
-     for the map, in Neutral and Warm.
-   - COOL borrows Marena's cool theme variables for now
-     (team will pick mind map colors for Cool later).
+   - Colors, one block per theme:
+       NEUTRAL (default) = "Quiet neutral" palette
+       WARM              = "Cottage warmth" palette
+       COOL              = Marena's cool theme variables (for now)
+   - Accent roles (same idea in every theme):
+       --accent  = highlights: hover, drop target, focus   (Steel / Honey)
+       --unread  = alerts: unread dot, Delete              (Mauve / Dusty rose)
+       --success = done: Save button                       (Lichen / Sage)
    ========================================================= */
 
-/* ---- Colors: BASE = "Cottage warmth" sepia palette ---- */
+/* ---- Colors: NEUTRAL (default) = "Quiet neutral" palette ---- */
 .mindmap {
-  --unread: #B4533C;          /* Brick: unread dot, same in every theme */
+  --unread: #B0908B;          /* Mauve: unread dot, Delete */
+  --alert-text: #8A6461;      /* Mauve, darkened so text is readable */
+  --accent: #8FA3B0;          /* Steel: highlights */
+  --success: #8DA899;         /* Lichen: Save */
+  --map-bg: #FFFFFF;          /* white, like Cool: boxes stand out */
+  --map-dots: #E5E5EA;        /* Ash */
+  --map-line: #D1D1D6;        /* Pebble */
+  --main-fill: #6E7B8B;       /* Slate */
+  --main-border: #6E7B8B;     /* Slate */
+  --main-text: #FFFFFF;       /* white on Slate */
+  --point-fill: #FFFFFF;      /* white */
+  --point-hover-fill: #F2F2F7;/* Fog */
+  --point-border: #8E8E93;    /* Stone */
+  --hover-border: #6E7B8B;    /* Slate */
+  --detail-fill: #F2F2F7;     /* Fog */
+  --detail-border: #D1D1D6;   /* Pebble */
+  --title: #1C1C1E;           /* Ink */
+  --text: #3A3A3C;            /* Charcoal */
+  --summary: #636366;         /* Graphite */
+  --switch-bg: #E5E5EA;       /* Ash */
+  --switch-active: #FFFFFF;   /* white */
+  --switch-text: #636366;     /* Graphite */
+  --switch-text-active: #1C1C1E;
+}
+
+/* ---- Colors: WARM = "Cottage warmth" sepia palette ---- */
+[data-theme="warm"] .mindmap {
+  --unread: #C9908E;          /* Dusty rose: unread dot, Delete */
+  --alert-text: #9E5F5C;      /* Dusty rose, darkened so text is readable */
+  --accent: #C8A96E;          /* Honey: highlights */
+  --success: #B7C4A1;         /* Sage: Save */
   --map-bg: #FFF8F0;          /* Linen */
   --map-dots: #E6D5C3;        /* Biscuit */
   --map-line: #A89279;        /* Sandstone */
   --main-fill: #D4A373;       /* Clay */
   --main-border: #4A3728;     /* Espresso */
+  --main-text: #4A3728;       /* Espresso on Clay */
   --point-fill: #F5EBE0;      /* Parchment */
   --point-hover-fill: #E6D5C3;/* Biscuit */
   --point-border: #8B7355;    /* Driftwood */
-  --hover-border: #8B7355;    /* Driftwood */
+  --hover-border: #C8A96E;    /* Honey */
   --detail-fill: #EDE0D4;     /* Oat */
   --detail-border: #A89279;   /* Sandstone */
   --title: #4A3728;           /* Espresso */
@@ -33,6 +68,11 @@
 
 /* ---- Colors: COOL (from Marena's cool theme variables, for now) ---- */
 [data-theme="cool"] .mindmap {
+  --unread: #B4533C;
+  --alert-text: #B4533C;
+  --accent: var(--color-accent, #8fa3ad);
+  --success: var(--color-success, #6b8a92);
+  --main-text: var(--node-title, #5b7a8c);
   --map-bg: var(--color-bg-card, #ffffff);
   --map-dots: var(--color-border, #dde3e7);
   --map-line: var(--node-detail-border, #b8c4ce);
@@ -85,7 +125,7 @@
   border-radius: 4px;
   border: 2.5px solid var(--main-border);
   background: var(--main-fill);
-  color: var(--title);
+  color: var(--main-text);
   font-size: 18px;
   font-weight: 700;
   padding: 16px;
@@ -223,8 +263,8 @@
   animation: unread-pulse 1s ease-out 2;
 }
 @keyframes unread-pulse {
-  0%   { box-shadow: 0 0 0 2px var(--map-bg), 0 0 0 2px rgba(180, 83, 60, 0.6); }
-  100% { box-shadow: 0 0 0 2px var(--map-bg), 0 0 0 12px rgba(180, 83, 60, 0); }
+  0%   { box-shadow: 0 0 0 2px var(--map-bg), 0 0 0 2px var(--unread); }
+  100% { box-shadow: 0 0 0 2px var(--map-bg), 0 0 0 12px transparent; }
 }
 @media (prefers-reduced-motion: reduce) {
   .mindmap .react-flow__node.has-unread::after { animation: none; }
@@ -298,7 +338,7 @@
 }
 /* the box you'd drop onto */
 .mindmap .react-flow__node.drop-target {
-  outline: 3px dashed var(--hover-border);
+  outline: 3px dashed var(--accent);
   outline-offset: 5px;
 }
 /* the box open in the edit panel */
@@ -350,7 +390,7 @@
   min-width: 0;
 }
 .edit-error {
-  color: var(--unread);
+  color: var(--alert-text);
   font-weight: 600;
 }
 
@@ -404,12 +444,12 @@
   cursor: pointer;
 }
 .edit-panel .edit-save {
-  background: var(--main-fill);
-  border-color: var(--main-border);
+  background: var(--success);
+  border-color: var(--success);
   color: var(--title);
 }
 .edit-panel .edit-delete {
-  color: var(--unread);
+  color: var(--alert-text);
   border-color: var(--unread);
   background: transparent;
 }

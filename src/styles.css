@@ -11,87 +11,123 @@
 }
 
 body {
-    background-color: var(--color-bg, #f7f5f2);
-    color: var(--color-text, #4a3e32);
-    font-family: 'Georgia', 'Noto Serif', serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--color-bg, #fafafa);
+    color: var(--color-text, #3a3a3c);
+    font-family: var(--font-body);
     line-height: 1.6;
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
 }
 
-/* ---- Theme tokens: Neutral (default) ---- */
+/* ---- Theme tokens: NEUTRAL (default) = "Quiet neutral" palette ----
+   Cool greys, soft slate accents. Swatch names are in the comments. */
 :root {
-  /* Surfaces */
-  --color-bg: #f7f5f2;
-  --color-bg-card: #ffffff;
-  --color-bg-muted: #efeae4;
+  /* Page UI font: Georgia in EVERY theme (themes only change colors).
+     The mind map keeps its own system font, set in mindmap.css. */
+  --font-body: Georgia, 'Noto Serif', serif;
+  --font-heading: Georgia, 'Noto Serif', serif;
+
+  /* Surfaces: white panels on a light grey page, so the map and transcript stand out */
+  --color-bg: #f2f2f7;            /* Fog: page background */
+  --color-bg-card: #ffffff;       /* white: card / panel bg */
+  --color-bg-muted: #e5e5ea;      /* Ash */
 
   /* Text */
-  --color-text: #4a3e32;
-  --color-text-muted: #7a6f64;
-  --color-text-light: #a59a8e;
+  --color-heading: #1c1c1e;       /* Ink: headings */
+  --color-text: #3a3a3c;          /* Charcoal: body text */
+  --color-text-muted: #636366;    /* Graphite: secondary text */
+  --color-text-light: #8e8e93;    /* Stone: muted, captions */
   --color-text-on-primary: #ffffff;
 
   /* Borders */
-  --color-border: #e4ddd4;
-  --color-border-soft: #f5f2ed;
-  --color-focus-ring: rgba(139, 69, 19, 0.35);
+  --color-border: #e5e5ea;        /* Ash: borders, dividers */
+  --color-border-soft: #f2f2f7;   /* Fog */
+  --color-focus-ring: rgba(110, 123, 139, 0.45);
 
   /* Shadows */
-  --shadow-sm: 0 1px 3px rgba(60, 50, 44, 0.06);
-  --shadow-md: 0 6px 18px rgba(60, 50, 44, 0.08);
+  --shadow-sm: 0 1px 3px rgba(28, 28, 30, 0.06);
+  --shadow-md: 0 6px 18px rgba(28, 28, 30, 0.08);
 
   /* Buttons */
-  --color-btn-primary: #8b4513;
-  --color-btn-primary-hover: #a0522d;
+  --color-btn-primary: #6e7b8b;   /* Slate: primary accent, buttons */
+  --color-btn-primary-hover: #5d6977;
   --color-btn-primary-text: #ffffff;
-  --color-btn-secondary: #c7b28a;
-  --color-btn-secondary-hover: #bfa780;
-  --color-btn-secondary-text: #4a3e32;
+  --color-btn-secondary: #e5e5ea; /* Ash */
+  --color-btn-secondary-hover: #d1d1d6; /* Pebble: hover states */
+  --color-btn-secondary-text: #3a3a3c;
   --color-btn-ghost-bg: transparent;
-  --color-btn-ghost-hover: #efeae4;
+  --color-btn-ghost-hover: #e5e5ea;
 
   /* Accents & status */
-  --color-accent: #d4a373;
-  --color-accent-soft: rgba(212, 163, 115, 0.15);
-  --color-recording: #a0522d;
-  --color-processing: #8b4513;
-  --color-error: #b35454;
-  --color-error-bg: rgba(179, 84, 84, 0.12);
-  --color-success: #6f7a5e;
+  --color-accent: #8fa3b0;        /* Steel: highlights, links */
+  --color-accent-soft: rgba(143, 163, 176, 0.18);
+  --color-recording: #8a6461;     /* Mauve, darkened so text is readable */
+  --color-processing: #6e7b8b;    /* Slate */
+  --color-error: #8a6461;         /* Mauve (dark) */
+  --color-error-bg: rgba(176, 144, 139, 0.18);   /* Mauve, soft */
+  --color-success: #5e7a6b;       /* Lichen, darkened so text is readable */
+  --color-action: #8fa3b0;        /* Steel: action items */
 
   /* Mind map nodes */
-  --node-main-border: #4a3e32;
-  --node-point-border: #7a6f64;
-  --node-detail-border: #c7b28a;
-  --node-detail-bg: #efeae4;
-  --node-text: #5c4f43;
-  --node-title: #4a3e32;
-  --node-summary: #7a6f64;
+  --node-main-border: #4f5a67;
+  --node-point-border: #8e8e93;
+  --node-detail-border: #d1d1d6;
+  --node-detail-bg: #e5e5ea;
+  --node-text: #3a3a3c;
+  --node-title: #1c1c1e;
+  --node-summary: #636366;
 }
-/* ---- Warm theme: cosy earth tones ---- */
+/* ---- WARM theme = "Cottage warmth" palette ----
+   Sepia: cozy cream, warm clay, soft earth. Sets every token so nothing leaks from Neutral. */
 [data-theme="warm"] {
-  --color-bg: #f9f6f2;
-  --color-text: #4a3e32;
-  --color-text-muted: #7a6f64;
-  --color-bg-muted: #efeae4;
-  --color-border: #e4ddd4;
-  --color-btn-primary: #8b4513;
-  --color-btn-primary-hover: #a0522d;
-  --color-btn-secondary: #c7b28a;
-  --color-btn-secondary-hover: #bfa780;
-  --color-accent: #d4a373;
-  --color-recording: #a0522d;
-  --node-main-border: #4a3e32;
-  --node-point-border: #7a6f64;
-  --node-detail-border: #c7b28a;
-  --node-detail-bg: #efeae4;
-  --node-text: #5c4f43;
-  --node-title: #4a3e32;
+  --color-bg: #fff8f0;            /* Linen: page background */
+  --color-bg-card: #f5ebe0;       /* Parchment: card / panel bg */
+  --color-bg-muted: #ede0d4;      /* Oat */
+
+  --color-heading: #4a3728;       /* Espresso: headings */
+  --color-text: #6b5744;          /* Walnut: body text */
+  --color-text-muted: #8b7355;    /* Driftwood: secondary text */
+  --color-text-light: #a89279;    /* Sandstone: muted, captions */
+  --color-text-on-primary: #4a3728;
+
+  --color-border: #ede0d4;        /* Oat: borders, dividers */
+  --color-border-soft: #f5ebe0;   /* Parchment */
+  --color-focus-ring: rgba(212, 163, 115, 0.55);
+
+  --shadow-sm: 0 1px 3px rgba(74, 55, 40, 0.07);
+  --shadow-md: 0 6px 18px rgba(74, 55, 40, 0.09);
+
+  --color-btn-primary: #d4a373;   /* Clay: primary accent, buttons */
+  --color-btn-primary-hover: #c8935f;
+  --color-btn-primary-text: #4a3728;   /* Espresso on Clay (white on Clay is too faint) */
+  --color-btn-secondary: #e6d5c3; /* Biscuit */
+  --color-btn-secondary-hover: #dcc7b1;
+  --color-btn-secondary-text: #4a3728;
+  --color-btn-ghost-bg: transparent;
+  --color-btn-ghost-hover: #e6d5c3;    /* Biscuit: hover states */
+
+  --color-accent: #c8a96e;        /* Honey: highlights, links */
+  --color-accent-soft: rgba(200, 169, 110, 0.2);
+  --color-recording: #9e5f5c;     /* Dusty rose, darkened so text is readable */
+  --color-processing: #8b7355;    /* Driftwood */
+  --color-error: #9e5f5c;         /* Dusty rose (dark) */
+  --color-error-bg: rgba(201, 144, 142, 0.2);    /* Dusty rose, soft */
+  --color-success: #6f7f5e;       /* Sage, darkened so text is readable */
+  --color-action: #c8a96e;        /* Honey: action items */
+
+  --node-main-border: #4a3728;
+  --node-point-border: #8b7355;
+  --node-detail-border: #a89279;
+  --node-detail-bg: #ede0d4;
+  --node-text: #4a3728;
+  --node-title: #4a3728;
+  --node-summary: #6b5744;
 }
 
 /* ---- Cool theme: cosy slate & sage ---- */
 [data-theme="cool"] {
+  --color-heading: #5c6b74;
+  --color-action: #8fa3ad;
   --color-bg: #f4f6f7;
   --color-text: #5c6b74;
   --color-text-muted: #8a97a0;
@@ -166,7 +202,7 @@ body {
 .app-title {
     font-size: 1.75rem;
     font-weight: 600;
-    color: var(--color-text);
+    color: var(--color-heading, var(--color-text));
     letter-spacing: -0.01em;
 }
 
@@ -207,7 +243,7 @@ body {
     background: transparent;
     padding: 6px 14px;
     border-radius: 8px;
-    font: 500 13px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font: 500 13px var(--font-body);
     color: var(--color-text-muted);
     cursor: pointer;
     transition: background 0.2s ease, color 0.2s ease;
@@ -227,7 +263,8 @@ body {
 
 /* ---- Typography ---- */
 h1, h2, h3, h4 {
-    color: var(--color-text);
+    color: var(--color-heading, var(--color-text));
+    font-family: var(--font-heading, inherit);
     font-weight: 600;
     letter-spacing: -0.01em;
 }
@@ -246,7 +283,12 @@ button {
     border-radius: 24px;
     transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.1s ease;
     font-family: inherit;
+    /* plain buttons (no btn-* class) follow the theme instead of the browser's grey */
+    background-color: var(--color-bg-muted);
+    color: var(--color-text);
 }
+/* :where() = zero priority, so every styled button's own hover still wins */
+:where(button:hover:not([disabled])) { background-color: var(--color-btn-ghost-hover); }
 
 button:active:not([disabled]) { transform: translateY(1px); }
 button[disabled] { opacity: 0.6; cursor: not-allowed; }
