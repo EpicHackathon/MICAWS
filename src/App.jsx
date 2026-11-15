@@ -110,6 +110,7 @@ export default function App() {
           <button type="button" data-active={theme === 'neutral'} onClick={() => setTheme('neutral')}>Neutral</button>
           <button type="button" data-active={theme === 'warm'} onClick={() => setTheme('warm')}>Warm</button>
           <button type="button" data-active={theme === 'cool'} onClick={() => setTheme('cool')}>Cool</button>
+          <button type="button" data-active={theme === 'dark'} onClick={() => setTheme('dark')}>Dark</button>
         </div>
       </header>
 

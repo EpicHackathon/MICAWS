@@ -160,6 +160,55 @@ body {
   --node-title: #5b7a8c;
   --node-summary: #8a97a0;
 }
+/* ---- DARK theme = "Midnight navy" palette ----
+   Deep blues, soft glows. Sets every token so nothing leaks from Neutral. */
+[data-theme="dark"] {
+  color-scheme: dark;             /* dark scrollbars and form controls */
+
+  --color-bg: #0d1117;            /* Void: page background */
+  --color-bg-card: #161b22;       /* Midnight: card / panel bg */
+  --color-bg-muted: #1e2a3a;      /* Navy */
+
+  --color-heading: #e8ecf0;       /* Cloud: headings */
+  --color-text: #c8d2dc;          /* Silver: body text */
+  --color-text-muted: #7a8a9e;    /* Pewter: secondary text */
+  --color-text-light: #5c6e82;    /* Dusk: muted, captions */
+  --color-text-on-primary: #e8ecf0;
+
+  --color-border: #1e2a3a;        /* Navy: borders, dividers */
+  --color-border-soft: #161b22;   /* Midnight */
+  --color-focus-ring: rgba(88, 166, 255, 0.5);
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.45);
+
+  --color-btn-primary: #3d5a80;   /* Steel blue: buttons, active */
+  --color-btn-primary-hover: #4a6a94;
+  --color-btn-primary-text: #e8ecf0;
+  --color-btn-secondary: #1e2a3a; /* Navy */
+  --color-btn-secondary-hover: #283848; /* Deep sea: hover states */
+  --color-btn-secondary-text: #c8d2dc;
+  --color-btn-ghost-bg: transparent;
+  --color-btn-ghost-hover: #283848;     /* Deep sea */
+
+  --color-accent: #58a6ff;        /* Electric: primary accent, links */
+  --color-accent-soft: rgba(88, 166, 255, 0.15);
+  --color-recording: #e06c60;     /* Ember */
+  --color-processing: #58a6ff;    /* Electric */
+  --color-error: #e06c60;         /* Ember: alerts */
+  --color-error-bg: rgba(224, 108, 96, 0.14);
+  --color-success: #3fb88c;       /* Mint: success */
+  --color-action: #58a6ff;        /* Electric: action items */
+
+  --node-main-border: #58a6ff;
+  --node-point-border: #3d5a80;
+  --node-detail-border: #283848;
+  --node-detail-bg: #1e2a3a;
+  --node-text: #c8d2dc;
+  --node-title: #e8ecf0;
+  --node-summary: #7a8a9e;
+}
+
 /* ---- Layout ---- */
 
 /* Main content wrapper for two-column layouts (e.g., Transcript sidebar) */

@@ -66,6 +66,41 @@
   --switch-text-active: #4A3728;
 }
 
+/* ---- Colors: DARK = "Midnight navy" palette ---- */
+[data-theme="dark"] .mindmap {
+  --unread: #E06C60;          /* Ember: unread dot, Delete */
+  --alert-text: #E06C60;      /* Ember (readable on dark) */
+  --accent: #58A6FF;          /* Electric: highlights */
+  --success: #3FB88C;         /* Mint: Save */
+  --on-success: #0D1117;      /* dark text on Mint */
+  --map-bg: #161B22;          /* Midnight */
+  --map-dots: #1E2A3A;        /* Navy */
+  --map-line: #5C6E82;        /* Dusk */
+  --main-fill: #3D5A80;       /* Steel blue */
+  --main-border: #58A6FF;     /* Electric glow */
+  --main-text: #E8ECF0;       /* Cloud */
+  --point-fill: #283848;      /* Deep sea */
+  --point-hover-fill: #30435A;/* Deep sea, lighter */
+  --point-border: #3D5A80;    /* Steel blue */
+  --hover-border: #58A6FF;    /* Electric */
+  --detail-fill: #1E2A3A;     /* Navy */
+  --detail-border: #283848;   /* Deep sea */
+  --title: #E8ECF0;           /* Cloud */
+  --text: #C8D2DC;            /* Silver */
+  --summary: #7A8A9E;         /* Pewter */
+  --switch-bg: #1E2A3A;       /* Navy */
+  --switch-active: #283848;   /* Deep sea */
+  --switch-text: #7A8A9E;     /* Pewter */
+  --switch-text-active: #E8ECF0;
+  /* React Flow's own zoom buttons + label (white by default) */
+  --xy-controls-button-background-color: #1E2A3A;
+  --xy-controls-button-background-color-hover: #283848;
+  --xy-controls-button-color: #C8D2DC;
+  --xy-controls-button-color-hover: #E8ECF0;
+  --xy-controls-button-border-color: #283848;
+  --xy-attribution-background-color: rgba(22, 27, 34, 0.6);
+}
+
 /* ---- Colors: COOL (from Marena's cool theme variables, for now) ---- */
 [data-theme="cool"] .mindmap {
   --unread: #B4533C;
@@ -446,7 +481,7 @@
 .edit-panel .edit-save {
   background: var(--success);
   border-color: var(--success);
-  color: var(--title);
+  color: var(--on-success, var(--title));
 }
 .edit-panel .edit-delete {
   color: var(--alert-text);

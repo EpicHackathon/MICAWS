@@ -115,9 +115,6 @@ export default function MeetingView({
           <li key={edge.id}>{nodes.find(node => node.id === edge.source)?.label} → {nodes.find(node => node.id === edge.target)?.label}</li>
         ))}</ul>
       </details>
-      <details><summary>Meeting state JSON</summary>
-        <pre style={{ overflowX: 'auto' }}>{JSON.stringify(state, null, 2)}</pre>
-      </details>
     </section>
   );
 }
