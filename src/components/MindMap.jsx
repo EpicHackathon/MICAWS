@@ -259,7 +259,10 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
   function handleNodeClick(event, node) {
     const clicked = allNodes.find(n => n.id === node.id);
     // Micah's details panel still opens from the topic list view.
-    if (clicked.parentId !== null && clicked.id !== focusId && hasKids(clicked.id)) {
+    // Main points ALWAYS open (even with no details yet: you still see their summary card).
+    // Deeper boxes open when they have their own sub-details.
+    const isMainPoint = clicked.parentId === mainIdea?.id;
+    if (clicked.parentId !== null && clicked.id !== focusId && (isMainPoint || hasKids(clicked.id))) {
       setFocusId(clicked.id);
       setShowAll(false);
     }

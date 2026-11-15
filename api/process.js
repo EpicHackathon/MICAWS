@@ -21,7 +21,9 @@ STRUCTURE RULES
 
 3. Details: parentId = a main point's id. Specific facts: names, dates, numbers, choices, assignments, reasons. Label 2–5 words. Summary: 1–2 complete sentences, at most 40 words, with the concrete facts.
 
-4. Sub-details (levels 4 and 5): parentId = the detail (or sub-detail) they elaborate on, when someone digs further into that specific point. Same label and summary rules as details. Don't force depth: shallow topics stay shallow.
+Break things down. Every main point should get details: create a separate detail for each specific fact, example, reason, opinion, name, number, date, choice or task said about it (usually 2–5 details per main point). Don't put several facts into one summary when they can be separate details.
+
+4. Sub-details (levels 4 and 5): when someone explains, gives an example of, or digs further into a specific detail, add sub-details under that detail (parentId = that detail). Same label and summary rules as details. Only skip deeper levels when nothing more specific was said.
 
 Never cut a summary off mid-sentence. Never go deeper than five levels. Every node except the main idea must have a parentId that references an existing node id in the current state.
 
