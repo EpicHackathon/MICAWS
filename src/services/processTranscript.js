@@ -2,10 +2,16 @@ import { emptyMeetingState, meetingSchema, requestSchema } from '../shared/meeti
 
 export async function processTranscript(newSegments, previousState = emptyMeetingState, options = {}) {
   const input = requestSchema.safeParse({
-    newSegments, previousState, ...(options.lockedIds?.length ? { lockedIds: options.lockedIds } : {}),
+    newSegments,
+    previousState,
+    ...(options.lockedIds?.length ? { lockedIds: options.lockedIds } : {}),
+    ...(options.historicalContext ? { historicalContext: options.historicalContext } : {}),
+    ...(options.reassessment ? { reassessment: true } : {}),
   });
   if (!input.success) throw new Error('Invalid transcript or meeting state. Check the segment format.');
-  if (!newSegments.some(segment => segment.text.trim())) return input.data.previousState;
+  if (!newSegments.some(segment => segment.text.trim()) && !input.data.reassessment) {
+    return input.data.previousState;
+  }
 
   const timeout = AbortSignal.timeout(55_000);
   let response;

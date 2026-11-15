@@ -120,9 +120,17 @@
   color: var(--color-text-muted, #7a6f64);
 }
 
-/* End-of-meeting summary card */
-.meeting-summary {
+/* End-of-meeting summary and action-item cards */
+.meeting-result-cards {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 16px;
   margin-top: 20px;
+}
+.meeting-summary,
+.meeting-action-card {
+  min-width: 0;
   padding: 16px 20px;
   border: 1px solid var(--color-border, #e5e0d8);
   border-left: 4px solid var(--color-accent, #8b7355);
@@ -130,7 +138,8 @@
   background: var(--color-bg-card, #fff);
   box-shadow: var(--shadow-sm, none);
 }
-.meeting-summary h2 {
+.meeting-summary h2,
+.meeting-action-card h2 {
   margin-top: 0;
 }
 .summary-overview {
@@ -166,19 +175,31 @@
 }
 
 /* Meeting action items:a small accent marker (Honey in Warm, Steel in Neutral) */
+.meeting-action-card .action-items {
+  margin: 10px 0 0;
+  list-style: none;
+}
 .action-items li {
   position: relative;
-  padding-left: 18px;
+  padding: 10px 0 10px 18px;
+  border-top: 1px solid var(--color-border-soft, var(--color-border, #e5e0d8));
+}
+.action-items li:first-child {
+  border-top: 0;
 }
 .action-items li::before {
   content: "";
   position: absolute;
-  left: 0;
+  left: 2px;
   top: 15px;
   width: 9px;
   height: 9px;
   border-radius: 50%;
   background: var(--color-action, var(--color-accent));
+}
+.action-items-empty {
+  margin-top: 10px;
+  color: var(--color-text-muted, #7a6f64);
 }
 .transcript-scroll {
   flex: 1 1 auto;
@@ -256,5 +277,11 @@
   .transcript-side.collapsed .transcript-toggle {
     writing-mode: horizontal-tb;
     align-self: flex-end;
+  }
+}
+
+@media (max-width: 640px) {
+  .meeting-result-cards {
+    grid-template-columns: 1fr;
   }
 }

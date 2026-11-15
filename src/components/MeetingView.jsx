@@ -106,34 +106,38 @@ export default function MeetingView({
           {!transcriptHidden && <TranscriptPanel segments={segments} isRecording={isRecording} />}
         </aside>
       </div>
-      {/* End-of-meeting summary (appears after you stop recording, when the map has caught up) */}
-      {!showSample && summary.status !== 'idle' && (
-        <section aria-label="Meeting summary" className="meeting-summary" aria-live="polite">
-          <h2>Meeting summary</h2>
-          {summary.status === 'loading' && !summary.data && <p className="summary-status">Writing the summary…</p>}
-          {summary.status === 'loading' && summary.data && <p className="summary-status">Updating the summary…</p>}
-          {summary.status === 'error' && (
-            <p className="summary-status">The summary couldn't be written ({summary.error}). It will try again the next time you stop recording.</p>
-          )}
-          {summary.data && (
-            <>
-              <p className="summary-overview">{summary.data.overview}</p>
-              {summary.data.keyPoints.length > 0 && (
-                <ul className="summary-points">{summary.data.keyPoints.map((point, index) => <li key={index}>{point}</li>)}</ul>
-              )}
-              {summary.data.nextTime?.length > 0 && (
-                <>
-                  <h3 className="summary-next-title">For next time</h3>
-                  <ul className="summary-points summary-next">{summary.data.nextTime.map((point, index) => <li key={index}>{point}</li>)}</ul>
-                </>
-              )}
-            </>
-          )}
+      <div className="meeting-result-cards">
+        {/* End-of-meeting summary (appears after you stop recording, when the map has caught up) */}
+        {!showSample && summary.status !== 'idle' && (
+          <section aria-label="Meeting summary" className="meeting-summary" aria-live="polite">
+            <h2>Meeting summary</h2>
+            {summary.status === 'loading' && !summary.data && <p className="summary-status">Writing the summary…</p>}
+            {summary.status === 'loading' && summary.data && <p className="summary-status">Updating the summary…</p>}
+            {summary.status === 'error' && (
+              <p className="summary-status">The summary couldn't be written ({summary.error}). It will try again the next time you stop recording.</p>
+            )}
+            {summary.data && (
+              <>
+                <p className="summary-overview">{summary.data.overview}</p>
+                {summary.data.keyPoints.length > 0 && (
+                  <ul className="summary-points">{summary.data.keyPoints.map((point, index) => <li key={index}>{point}</li>)}</ul>
+                )}
+                {summary.data.nextTime?.length > 0 && (
+                  <>
+                    <h3 className="summary-next-title">For next time</h3>
+                    <ul className="summary-points summary-next">{summary.data.nextTime.map((point, index) => <li key={index}>{point}</li>)}</ul>
+                  </>
+                )}
+              </>
+            )}
+          </section>
+        )}
+        <section aria-label="Meeting action items" className="meeting-action-card">
+          <h2>Meeting action items ({actionItems.length})</h2>
+          {actionItems.length ? <ul className="action-items">{actionItems.map(item => <li key={item.id}>{item.text}</li>)}</ul>
+            : <p className="action-items-empty">No action items yet.</p>}
         </section>
-      )}
-      <h2>Meeting action items ({actionItems.length})</h2>
-      {actionItems.length ? <ul className="action-items">{actionItems.map(item => <li key={item.id}>{item.text}</li>)}</ul>
-        : <p>No action items yet.</p>}
+      </div>
       <details>
         <summary>Connections ({edges.length})</summary>
         <ul>{edges.map(edge => (

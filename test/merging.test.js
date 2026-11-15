@@ -36,6 +36,15 @@ const ask = (answer, lockedIds) => createHandler({
   }),
 }));
 
+const mergedIntoLocked = build([
+  node('plan', 'Website Plan', null, 5),
+  node('layout', 'Layout', 'plan', 4),
+  node('size', 'Size Limits', 'layout'),
+  node('placement-detail', 'Right Side Placement', 'layout'),
+  node('colors', 'Colors', 'plan', 4),
+  node('palette', 'Sepia Palette', 'colors'),
+]);
+
 test('the AI may merge two similar topics it made (child moves, duplicate removed)', async () => {
   assert.equal(meetingSchema.safeParse(merged).success, true);
   const response = await ask(merged);
@@ -48,7 +57,38 @@ test('the AI may merge two similar topics it made (child moves, duplicate remove
 test('merging is refused when it removes or moves a topic a person edited', async () => {
   assert.equal((await ask(merged, ['placement'])).status, 502);   // placement was hand-edited
   assert.equal((await ask(merged, ['size'])).status, 502);        // size was hand-placed
-  assert.equal((await ask(merged, ['layout'])).status, 200);      // merging INTO a locked topic is fine
+  assert.equal((await ask(merged, ['layout'])).status, 502);      // locked content cannot be rewritten
+  assert.equal((await ask(mergedIntoLocked, ['layout'])).status, 200); // children may be added under it
+});
+
+test('locked node content stays exact while evidence-backed children can be added', () => {
+  const locked = structuredClone(previous);
+  for (const change of [
+    node => { node.label = 'AI renamed this'; },
+    node => { node.summary = 'AI rewrote this.'; },
+    node => { node.importance = 1; },
+    node => { node.parentId = 'colors'; },
+  ]) {
+    const changed = structuredClone(locked);
+    change(changed.nodes.find(item => item.id === 'layout'));
+    assert.equal(preservesPrevious(changed, locked, ['layout']), false);
+  }
+
+  const expanded = structuredClone(locked);
+  expanded.nodes.push({
+    id: 'historical-evidence',
+    label: 'Customer Count',
+    summary: 'The pilot includes five customers.',
+    importance: 2,
+    parentId: 'layout',
+  });
+  expanded.edges.push({
+    id: 'layout-historical-evidence',
+    source: 'layout',
+    target: 'historical-evidence',
+  });
+  assert.equal(meetingSchema.safeParse(expanded).success, true);
+  assert.equal(preservesPrevious(expanded, locked, ['layout']), true);
 });
 
 test('topics with user- ids are always kept in place', () => {

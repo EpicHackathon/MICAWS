@@ -10,12 +10,63 @@ export const processorTiming = {
   limitDelays: [30000, 60000],
   // While recording, call the AI at most once every 20s (more speech per call = fewer calls).
   minGapWhileRecording: 20000,
+  reassessmentIntervalMs: 5 * 60 * 1000,
 };
 // locked: ids of topics people edited by hand; sent with every update so the AI leaves them alone.
 const freshMeeting = () => ({
   state: emptyMeetingState, cursor: 0, request: null, editsDuringRequest: [], failures: 0, retryTimer: null,
-  locked: new Set(), lastCallAt: 0, limited: false,
+  locked: new Set(), lastCallAt: 0, lastReassessmentAt: null, limited: false,
 });
+
+const MAX_HISTORICAL_SEGMENTS = 16;
+const MAX_HISTORICAL_CHARS = 8000;
+const RECENT_HISTORICAL_SEGMENTS = 8;
+
+function evenlySpaced(items, count) {
+  if (count >= items.length) return items;
+  if (count === 1) return [items[Math.floor((items.length - 1) / 2)]];
+  return Array.from({ length: count }, (_, index) =>
+    items[Math.round(index * (items.length - 1) / (count - 1))],
+  );
+}
+
+export function selectHistoricalContext(segments, endIndex) {
+  const unique = [];
+  const seen = new Set();
+  for (const [index, segment] of segments.slice(0, endIndex).entries()) {
+    const text = segment.text.trim();
+    const key = text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    unique.push({ index, segment: { ...segment, text } });
+  }
+
+  const recent = unique.slice(-RECENT_HISTORICAL_SEGMENTS);
+  const older = unique.slice(0, -RECENT_HISTORICAL_SEGMENTS);
+  const olderCount = Math.min(
+    RECENT_HISTORICAL_SEGMENTS,
+    MAX_HISTORICAL_SEGMENTS - recent.length,
+  );
+  const selected = evenlySpaced(older, olderCount);
+
+  let totalChars = 0;
+  const boundedRecent = [];
+  for (const item of recent.slice().reverse()) {
+    if (totalChars + item.segment.text.length > MAX_HISTORICAL_CHARS) continue;
+    boundedRecent.push(item);
+    totalChars += item.segment.text.length;
+  }
+
+  for (const item of selected) {
+    if (totalChars + item.segment.text.length > MAX_HISTORICAL_CHARS) continue;
+    boundedRecent.push(item);
+    totalChars += item.segment.text.length;
+  }
+
+  return boundedRecent
+    .sort((left, right) => left.index - right.index)
+    .map(item => item.segment);
+}
 
 // Topics an edit added, renamed, rewrote or moved.
 function changedIds(before, after) {
@@ -44,7 +95,14 @@ export function useMeetingProcessor(segments, isRecording, intervalMs = 10_000, 
     const current = meeting.current;
     const end = latest.current.segments.length;
     if (latest.current.paused) return;   // map is being edited: notes wait, nothing is lost
-    if (current.request || end <= current.cursor) return;
+    if (current.request) return;
+    const hasPending = end > current.cursor;
+    const historicalContext = selectHistoricalContext(latest.current.segments, current.cursor);
+    const reassessment = current.state.nodes.length > 0
+      && historicalContext.length > 0
+      && current.lastReassessmentAt !== null
+      && Date.now() - current.lastReassessmentAt >= processorTiming.reassessmentIntervalMs;
+    if (!hasPending && !reassessment) return;
     if (current.retryTimer && current.limited) return;   // waiting out Gemini's limit: don't call early
 
     // While recording, space calls out; the lines wait and go in the next call (nothing is lost).
@@ -71,7 +129,12 @@ export function useMeetingProcessor(segments, isRecording, intervalMs = 10_000, 
       const next = await processTranscript(
         latest.current.segments.slice(current.cursor, end),
         current.state,
-        { signal: controller.signal, lockedIds: [...current.locked] },
+        {
+          signal: controller.signal,
+          lockedIds: [...current.locked],
+          historicalContext,
+          reassessment,
+        },
       );
       if (meeting.current !== current) return;
       // The AI answered based on the map from before any edits made meanwhile: replay them.
@@ -82,6 +145,9 @@ export function useMeetingProcessor(segments, isRecording, intervalMs = 10_000, 
       current.editsDuringRequest = [];
       current.cursor = end;
       current.state = merged;
+      if (reassessment || current.lastReassessmentAt === null) {
+        current.lastReassessmentAt = Date.now();
+      }
       setState(merged);
       current.failures = 0;
       succeeded = true;

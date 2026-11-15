@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { JSDOM } from 'jsdom';
+import React, { act } from 'react';
 import { createHandler } from '../api/process.js';
 import { processTranscript } from '../src/services/processTranscript.js';
 import { demoBatches, demoStates } from '../src/shared/demo.js';
 import { emptyMeetingState, meetingSchema } from '../src/shared/meetingSchema.js';
+import { selectHistoricalContext, useMeetingProcessor, processorTiming } from '../src/hooks/useMeetingProcessor.js';
 
 const mock = createHandler({ env: { MEETING_MOCK: 'true' } });
 const send = (handler, newSegments, previousState = emptyMeetingState) => handler(
@@ -11,6 +14,50 @@ const send = (handler, newSegments, previousState = emptyMeetingState) => handle
     method: 'POST', body: JSON.stringify({ newSegments, previousState }),
   }),
 );
+
+async function setupHook(t) {
+  const dom = new JSDOM('<div id="root"></div>', { url: 'http://localhost/' });
+  const originals = [];
+  for (const key of ['window', 'document', 'navigator', 'HTMLElement', 'Node']) {
+    originals.push([key, Object.getOwnPropertyDescriptor(globalThis, key)]);
+    Object.defineProperty(globalThis, key, {
+      value: dom.window[key],
+      configurable: true,
+      writable: true,
+    });
+  }
+  const originalActEnvironment = Object.getOwnPropertyDescriptor(
+    globalThis,
+    'IS_REACT_ACT_ENVIRONMENT',
+  );
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  const { createRoot } = await import('react-dom/client');
+  const root = createRoot(document.getElementById('root'));
+  const seen = {};
+  function Probe(props) {
+    Object.assign(
+      seen,
+      useMeetingProcessor(props.segments, props.isRecording, 1_000_000),
+    );
+    return null;
+  }
+  const render = props => act(async () => root.render(React.createElement(Probe, props)));
+  const sleep = ms => act(async () => { await new Promise(resolve => setTimeout(resolve, ms)); });
+  t.after(async () => {
+    await act(async () => root.unmount());
+    dom.window.close();
+    for (const [key, original] of originals) {
+      if (original) Object.defineProperty(globalThis, key, original);
+      else delete globalThis[key];
+    }
+    if (originalActEnvironment) {
+      Object.defineProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT', originalActEnvironment);
+    } else {
+      delete globalThis.IS_REACT_ACT_ENVIRONMENT;
+    }
+  });
+  return { render, seen, sleep };
+}
 
 test('three sequential updates add, revise and reuse topics', async () => {
   let state = emptyMeetingState;
@@ -271,4 +318,164 @@ test('a combined mock request keeps both sample and arbitrary text', async () =>
   const state = await response.json();
   assert.ok(state.nodes.some(node => node.id === 'launch'));
   assert.ok(state.nodes.some(node => node.summary === text));
+});
+
+test('long meeting history stays bounded, spans the meeting, and drops exact repetition', () => {
+  const transcript = Array.from({ length: 120 }, (_, index) => ({
+    time: index * 10,
+    speaker: null,
+    text: index % 2 === 0 ? 'Repeated status update.' : `Decision ${index} was recorded.`,
+  }));
+  const context = selectHistoricalContext(transcript, transcript.length);
+  const repeated = context.filter(segment => segment.text === 'Repeated status update.');
+
+  assert.equal(context.length, 16);
+  assert.equal(repeated.length, 1);
+  assert.equal(context[0].time, 0);
+  assert.equal(context.at(-1).time, 1190);
+  assert.ok(context.reduce((total, segment) => total + segment.text.length, 0) <= 8000);
+});
+
+test('scheduled review sends bounded history even when no new transcript is pending', async t => {
+  const { render, seen, sleep } = await setupHook(t);
+  Object.assign(processorTiming, { reassessmentIntervalMs: 100 });
+  let now = Date.now();
+  t.mock.method(Date, 'now', () => now);
+  const state = {
+    nodes: [{ id: 'meeting', label: 'Meeting', summary: 'Meeting discussion.', importance: 5, parentId: null }],
+    edges: [],
+    actionItems: [],
+  };
+  const transcript = Array.from({ length: 24 }, (_, index) => ({
+    time: index * 10,
+    speaker: null,
+    text: `Evidence statement ${index}.`,
+  }));
+  const calls = [];
+  t.mock.method(globalThis, 'fetch', async (_url, options) => {
+    calls.push(JSON.parse(options.body));
+    return Response.json(state);
+  });
+
+  await render({ segments: transcript, isRecording: false });
+  await sleep(20);
+  assert.equal(seen.pendingCount, 0);
+  assert.equal(calls.length, 1);
+
+  now += processorTiming.reassessmentIntervalMs + 1;
+  await act(async () => seen.processPending());
+
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[1].newSegments, []);
+  assert.equal(calls[1].reassessment, true);
+  assert.ok(calls[1].historicalContext.length <= 16);
+  assert.equal(calls[1].historicalContext[0].time, 0);
+  assert.equal(calls[1].historicalContext.at(-1).time, 230);
+  assert.equal(seen.pendingCount, 0);
+});
+
+test('accepts evidence-backed child and grandchild expansion without changing existing IDs', async () => {
+  const previousState = {
+    nodes: [
+      { id: 'meeting', label: 'Product Planning', summary: 'Plan the pilot.', importance: 5, parentId: null },
+      { id: 'pilot', label: 'Pilot', summary: 'Discuss the pilot.', importance: 4, parentId: 'meeting' },
+    ],
+    edges: [{ id: 'meeting-pilot', source: 'meeting', target: 'pilot' }],
+    actionItems: [],
+  };
+  const expandedState = {
+    nodes: [
+      previousState.nodes[0],
+      previousState.nodes[1],
+      { id: 'pilot-scope', label: 'Pilot Scope', summary: 'The pilot includes five customers.', importance: 3, parentId: 'pilot' },
+      { id: 'pilot-period', label: 'Trial Period', summary: 'The pilot lasts four weeks.', importance: 2, parentId: 'pilot-scope' },
+      { id: 'pilot-measure', label: 'Success Measure', summary: 'Sam will measure conversion.', importance: 3, parentId: 'pilot' },
+    ],
+    edges: [
+      { id: 'meeting-pilot', source: 'meeting', target: 'pilot' },
+      { id: 'pilot-pilot-scope', source: 'pilot', target: 'pilot-scope' },
+      { id: 'pilot-scope-pilot-period', source: 'pilot-scope', target: 'pilot-period' },
+      { id: 'pilot-pilot-measure', source: 'pilot', target: 'pilot-measure' },
+    ],
+    actionItems: [],
+  };
+  let receivedInput;
+  const handler = createHandler({
+    env: { GEMINI_API_KEY: 'test-only' },
+    generateText: async input => {
+      receivedInput = input;
+      return JSON.stringify(expandedState);
+    },
+  });
+  const response = await handler(new Request('http://localhost/api/process', {
+    method: 'POST',
+    body: JSON.stringify({
+      newSegments: [{ time: 250, speaker: 'Speaker 1', text: 'Sam will measure conversion after four weeks.' }],
+      historicalContext: [{ time: 50, speaker: 'Speaker 2', text: 'The pilot includes five customers.' }],
+      previousState,
+    }),
+  }));
+
+  assert.equal(response.status, 200);
+  assert.equal(meetingSchema.safeParse(await response.json()).success, true);
+  assert.deepEqual(receivedInput.historicalContext, [
+    { time: 50, speaker: 'Speaker 2', text: 'The pilot includes five customers.' },
+  ]);
+  assert.equal(receivedInput.mapCheck.mainPointsWithFewDetails[0].id, 'pilot');
+  assert.equal(receivedInput.mapCheck.mainPointsWithFewDetails[0].detailCount, 0);
+});
+
+test('repetitive content can reassess to the unchanged map without forcing a target', async () => {
+  const previousState = structuredClone(demoStates[0]);
+  let receivedInput;
+  const handler = createHandler({
+    env: { GEMINI_API_KEY: 'test-only' },
+    generateText: async input => {
+      receivedInput = input;
+      return JSON.stringify(previousState);
+    },
+  });
+  const repeated = { time: 20, speaker: null, text: 'The launch remains on schedule.' };
+  const response = await handler(new Request('http://localhost/api/process', {
+    method: 'POST',
+    body: JSON.stringify({
+      newSegments: [repeated],
+      historicalContext: [{ ...repeated, time: 10 }],
+      reassessment: true,
+      previousState,
+    }),
+  }));
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), previousState);
+  assert.equal(receivedInput.reassessment, true);
+  assert.equal(receivedInput.newSegments[0].text, receivedInput.historicalContext[0].text);
+});
+
+test('rejects historical context beyond its count and size bounds', async () => {
+  let calls = 0;
+  const handler = createHandler({
+    env: { GEMINI_API_KEY: 'test-only' },
+    generateText: async () => {
+      calls += 1;
+      return JSON.stringify(demoStates[0]);
+    },
+  });
+
+  const segment = { time: 0, speaker: null, text: 'Earlier statement.' };
+  for (const historicalContext of [
+    Array.from({ length: 17 }, (_, index) => ({ ...segment, time: index })),
+    [{ ...segment, text: 'x'.repeat(8001) }],
+  ]) {
+    const response = await handler(new Request('http://localhost/api/process', {
+      method: 'POST',
+      body: JSON.stringify({
+        newSegments: [{ time: 100, speaker: null, text: 'New statement.' }],
+        historicalContext,
+        previousState: emptyMeetingState,
+      }),
+    }));
+    assert.equal(response.status, 400);
+  }
+  assert.equal(calls, 0);
 });

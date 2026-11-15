@@ -76,8 +76,22 @@ export const requestSchema = z.strictObject({
     time: z.number().nonnegative(), speaker: z.string().nullable(), text: z.string(),
   })),
   previousState: meetingSchema,
+  historicalContext: z.array(z.strictObject({
+    time: z.number().nonnegative(), speaker: z.string().nullable(), text: z.string(),
+  })).max(16).optional(),
+  reassessment: z.boolean().optional(),
   // Topics people edited by hand (renamed/moved/added). The AI must not move, rename or delete them.
   lockedIds: z.array(z.string()).optional(),
+}).superRefine((request, ctx) => {
+  const historyLength = (request.historicalContext || [])
+    .reduce((length, segment) => length + segment.text.length, 0);
+  if (historyLength > 8000) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['historicalContext'],
+      message: 'Historical context exceeds the 8000 character limit',
+    });
+  }
 });
 
 export const emptyMeetingState = { nodes: [], edges: [], actionItems: [] };
