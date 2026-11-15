@@ -10,7 +10,7 @@ const FOCUS_WIDTH = 280;
 
 // Spacing between boxes
 const TREE_COLUMN = 220;   // tree: distance between neighbouring columns (must be > widest pill, 196)
-const LEVEL_GAP = 56;      // tree: gap between a level and the level below it
+const LEVEL_GAP = 64;      // tree: gap between a level and the level below it (room for the lines)
 const LINEAR_GAP_X = 100;  // linear: gap between a level and the level to its right
 const STACK_GAP = 18;      // linear: gap between stacked boxes
 const BUBBLE_START = 0;    // bubble: first child at 3 o'clock (0), going clockwise
@@ -288,7 +288,9 @@ export default function MindMap({
     ? allNodes
     : allNodes.filter(node => node.id === top || node.parentId === top);
   const visibleIds = new Set(nodes.map(node => node.id));
-  const edges = allEdges.filter(edge => visibleIds.has(edge.source) && visibleIds.has(edge.target));
+  const edges = allEdges
+    .filter(edge => visibleIds.has(edge.source) && visibleIds.has(edge.target))
+    .map(edge => ({ ...edge, selectable: false, focusable: false }));   // lines aren't clickable
 
   // Does this box have children (anywhere in the meeting)? Those can be clicked to go deeper.
   const hasKids = id => allNodes.some(node => node.parentId === id);
@@ -301,7 +303,10 @@ export default function MindMap({
     const level = getLevel(node, mainIdea);
     return [node.id, {
       width: isFocus ? FOCUS_WIDTH : BOX_WIDTH[level],
-      height: estimateHeight(node, level, isFocus, level === 'detail' && hiddenKidCount(node.id) > 0),
+      // Use the REAL height React Flow measured; the estimate is only for the first instant
+      // before a box has been measured (then the layout redoes itself with the real size).
+      height: measured[node.id]?.height
+        ?? estimateHeight(node, level, isFocus, level === 'detail' && hiddenKidCount(node.id) > 0),
     }];
   }));
   const kidsOf = id => nodes.filter(node => node.parentId === id);
@@ -542,7 +547,8 @@ export default function MindMap({
         onNodeClick={handleNodeClick}
         onPaneClick={handlePaneClick}
       >
-        <AutoFit shape={mapStyle + '|' + (fullView ? 'all' : top) + '|' + allNodes.map(n => n.id + ':' + n.parentId).join(',')} />
+        <AutoFit shape={mapStyle + '|' + (fullView ? 'all' : top) + '|' + allNodes.map(n => n.id + ':' + n.parentId).join(',')
+          + '|' + nodes.map(n => Math.round(measured[n.id]?.height ?? 0)).join(',')} />
         {editMode && (
           <Panel position="bottom-center">
             <div className="edit-hint" role="status">
