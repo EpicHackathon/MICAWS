@@ -138,7 +138,7 @@ function layout(mapStyle, root, kidsOf, size) {
   return pos;
 }
 
-export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNodeId, onSelectNode }) {
+export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNodeId, onSelectNode, live = true }) {
   // focusId = the main point you clicked. null means "big picture".
   const [focusId, setFocusId] = useState(null);
   // mapStyle = 'tree', 'linear' or 'bubble'
@@ -149,17 +149,21 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
   // UNREAD DOTS: ids of MAIN POINTS that got new info (live) nobody has looked at yet.
   // Only main points (the rounded rectangles) ever get a dot.
   const [unread, setUnread] = useState(() => new Set());
-  const lastSeen = useRef(null);       // what each topic said last time: id -> "label|summary"
+  // what each topic said last time: id -> "label|summary".
+  // A live meeting starts from "nothing said yet", so its very first topics get dots too.
+  const lastSeen = useRef(live ? new Map() : null);
   const focusRef = useRef(focusId);    // which point you're looking at right now
   focusRef.current = focusId;
   useEffect(() => {
     const now = new Map(allNodes.map(node => [node.id, node.label + '|' + node.summary]));
     const before = lastSeen.current;
     lastSeen.current = now;
-    if (!before) return;   // first time the map appears: nothing is "new" yet
+    // The sample meeting is not live talk: never any dots.
+    if (!live || !before) { setUnread(new Set()); return; }
 
-    // A completely different meeting (e.g. "Load sample meeting")? That's not live talk: no dots.
-    const sameMeeting = [...now.keys()].some(id => before.has(id));
+    // Switched to a completely different meeting (e.g. back from the sample)? No dots.
+    // (An empty "before" means the live meeting just started: everything counts as new.)
+    const sameMeeting = before.size === 0 || [...now.keys()].some(id => before.has(id));
     if (!sameMeeting) { setUnread(new Set()); return; }
 
     // Live update: find what changed, then point the dot at its MAIN POINT.
@@ -175,7 +179,7 @@ export default function MindMap({ nodes: allNodes, edges: allEdges, selectedNode
     }
     pointsToDot.delete(focusRef.current);   // you're already looking at that one
     if (pointsToDot.size) setUnread(current => new Set([...current, ...pointsToDot]));
-  }, [allNodes]);
+  }, [allNodes, live]);
 
   function markRead(ids) {
     setUnread(current => {

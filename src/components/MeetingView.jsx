@@ -28,7 +28,7 @@ export default function MeetingView({ state: liveState }) {
           showMap ? (
             <div className="mindmap-frame">
               <MindMap nodes={nodes} edges={edges} selectedNodeId={selectedNodeId}
-                onSelectNode={setSelectedNodeId} />
+                onSelectNode={setSelectedNodeId} live={!showSample} />
             </div>
           ) : (
             <ul>
