@@ -6,6 +6,8 @@ const text = z.string().refine(value => value.trim().length > 0, 'Expected nonbl
 const summaryShape = z.strictObject({
   overview: text,
   keyPoints: z.array(text).max(8),
+  // "For next time": open questions, postponed decisions, things to check on at the next meeting.
+  nextTime: z.array(text).max(6),
 });
 export const summarySchema = summaryShape;
 

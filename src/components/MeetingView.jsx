@@ -121,6 +121,12 @@ export default function MeetingView({
               {summary.data.keyPoints.length > 0 && (
                 <ul className="summary-points">{summary.data.keyPoints.map((point, index) => <li key={index}>{point}</li>)}</ul>
               )}
+              {summary.data.nextTime?.length > 0 && (
+                <>
+                  <h3 className="summary-next-title">For next time</h3>
+                  <ul className="summary-points summary-next">{summary.data.nextTime.map((point, index) => <li key={index}>{point}</li>)}</ul>
+                </>
+              )}
             </>
           )}
         </section>

@@ -1,6 +1,6 @@
 import { summaryRequestSchema, summarySchema } from '../shared/summarySchema.js';
 
-// Ask the server for the end-of-meeting summary: { overview, keyPoints }.
+// Ask the server for the end-of-meeting summary: { overview, keyPoints, nextTime }.
 export async function summarizeMeeting(segments, state, { signal } = {}) {
   const input = summaryRequestSchema.safeParse({ segments, state });
   if (!input.success) throw new Error('Could not build the summary request.');

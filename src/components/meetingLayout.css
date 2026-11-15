@@ -154,6 +154,13 @@
   border-radius: 50%;
   background: var(--color-text-muted, #7a6f64);
 }
+.summary-next-title {
+  margin-top: 14px;
+  font-size: 1rem;
+}
+.summary-next li::before {
+  background: var(--color-accent, #8b7355);   /* accent dot = something to bring up next time */
+}
 .summary-status {
   font-style: italic;
 }

@@ -85,11 +85,13 @@ test('summary endpoint: mock summary from the map, real AI answer validated', as
   assert.deepEqual(mocked, mockSummary(previous));
   assert.match(mocked.overview, /Website Plan/);
   assert.equal(mocked.keyPoints.length, 3);
+  assert.deepEqual(mocked.nextTime, ['Check on: Sam drafts the layout.']);
 
-  const good = { overview: 'The team planned the website layout and colors.', keyPoints: ['The panel goes on the right.'] };
+  const good = { overview: 'The team planned the website layout and colors.', keyPoints: ['The panel goes on the right.'], nextTime: ['Decide the button color.'] };
   const ai = answer => createSummaryHandler({ env: { GEMINI_API_KEY: 'k' }, generateText: async () => answer });
   assert.deepEqual(await (await ai(JSON.stringify(good))(request({ segments, state: previous }))).json(), good);
   assert.equal((await ai('not json')(request({ segments, state: previous }))).status, 502);
-  assert.equal((await ai(JSON.stringify({ overview: '' , keyPoints: [] }))(request({ segments, state: previous }))).status, 502);
+  assert.equal((await ai(JSON.stringify({ overview: '' , keyPoints: [], nextTime: [] }))(request({ segments, state: previous }))).status, 502);
+  assert.equal((await ai(JSON.stringify({ overview: 'x', keyPoints: [] }))(request({ segments, state: previous }))).status, 502);   // nextTime missing
   assert.equal((await ai(JSON.stringify(good))(request({ segments: 'x', state: previous }))).status, 400);
 });

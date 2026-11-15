@@ -2,7 +2,7 @@ import { GoogleGenAI } from '@google/genai';
 import { summaryJsonSchema, summaryRequestSchema, summarySchema } from '../src/shared/summarySchema.js';
 import { generateWithOllama } from './ollama.js';
 
-// POST /api/summary  { segments, state }  ->  { overview, keyPoints }
+// POST /api/summary  { segments, state }  ->  { overview, keyPoints, nextTime }
 // Called once recording stops and the mind map has caught up.
 
 const systemInstruction = `
@@ -10,9 +10,10 @@ You write the end-of-meeting summary. The request JSON contains the full transcr
 
 Return JSON with exactly these fields:
 - overview: 2–4 complete sentences: what the meeting was about, the main things discussed, and what was decided.
-- keyPoints: 3–6 items, each ONE complete sentence. Put decisions first, then important facts (names, dates, numbers, choices) and open questions.
+- keyPoints: 3–6 items, each ONE complete sentence. Put decisions first, then important facts (names, dates, numbers, choices).
+- nextTime: 0–5 items for the NEXT meeting, each ONE complete sentence: questions that were raised but not answered, decisions that were postponed, things to check on or follow up (e.g. "Check whether Sophia's microphone test on Friday worked."). Use an empty list if nothing was left open.
 
-Rules: ground everything in the transcript and map; never invent facts, names or decisions. Do not repeat the action items as key points (they are listed separately). Ignore filler and small talk. If very little was said, keep it short (fewer key points) rather than padding.
+Rules: ground everything in the transcript and map; never invent facts, names, decisions or follow-ups. Do not repeat the action items word for word (they are listed separately); a nextTime item may ask to check on one. Ignore filler and small talk. If very little was said, keep it short (fewer key points) rather than padding.
 `;
 
 async function generate(input, env, model) {
@@ -32,6 +33,7 @@ export function mockSummary(state) {
   return {
     overview: root ? `${root.label}: ${root.summary}` : 'Nothing meaningful was discussed yet.',
     keyPoints: points.slice(0, 6).map(node => `${node.label}: ${node.summary}`),
+    nextTime: state.actionItems.slice(0, 5).map(task => `Check on: ${task.text}`),
   };
 }
 
