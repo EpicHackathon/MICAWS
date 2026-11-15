@@ -44,6 +44,8 @@ export function MeetingResults({ segments, isRecording, clearTranscript, onManua
         onEdit={processor.applyEdit}
         onEditingChange={setEditingMap}
         pendingCount={processor.pendingCount}
+        segments={segments}
+        isRecording={isRecording}
       />
       <ManualInput key={'input-' + viewVersion} disabled={captureBusy || isRecording || isProcessing || !onManualSegment} onSubmit={onManualSegment} />
     </>
@@ -120,14 +122,7 @@ export default function App() {
       {microphone.status === 'starting' && <p role="status">Waiting for microphone permission…</p>}
       {microphone.status === 'transcribing' && <p role="status">Finishing pending transcription…</p>}
       {microphone.error && <p role="alert">{microphone.error}</p>}
-      {segments.length > 0 && (
-        <section aria-label="Transcript">
-          <h2>Transcript</h2>
-          {segments.map((segment, index) => (
-            <p key={index}><strong>{segment.time.toFixed(1)}s</strong> {segment.speaker && `${segment.speaker}: `}{segment.text}</p>
-          ))}
-        </section>
-      )}
+      {/* The transcript now lives in the side panel next to the mind map (MeetingView). */}
 
       {/* The results component now consumes the recording state */}
       <MeetingResults 

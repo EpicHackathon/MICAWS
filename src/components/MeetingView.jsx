@@ -1,8 +1,49 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import MindMap from './MindMap.jsx';
+import TranscriptPanel from './TranscriptPanel.jsx';
 import { mockMeeting } from '../shared/mockMeeting.js';
+import './meetingLayout.css';
 
-export default function MeetingView({ state: liveState, onEdit: onLiveEdit, onEditingChange, pendingCount = 0 }) {
+const MIN_TRANSCRIPT = 220;
+const MAX_TRANSCRIPT = 640;
+const readSavedWidth = () => {
+  try { return Number(localStorage.getItem('micaws.transcriptWidth')) || 320; } catch { return 320; }
+};
+
+export default function MeetingView({
+  state: liveState, onEdit: onLiveEdit, onEditingChange, pendingCount = 0,
+  segments = [], isRecording = false,
+}) {
+  // Transcript side panel: width (drag the handle) and hide/show.
+  const layoutRef = useRef(null);
+  const [transcriptWidth, setTranscriptWidth] = useState(readSavedWidth);
+  const [transcriptHidden, setTranscriptHidden] = useState(false);
+  const [resizing, setResizing] = useState(false);
+  function changeWidth(width) {
+    const layoutWidth = layoutRef.current?.getBoundingClientRect().width || 1200;
+    // never let the transcript take more than half the row: the map keeps most of the space
+    const clamped = Math.round(Math.min(Math.max(width, MIN_TRANSCRIPT), MAX_TRANSCRIPT, layoutWidth / 2));
+    setTranscriptWidth(clamped);
+    try { localStorage.setItem('micaws.transcriptWidth', String(clamped)); } catch { /* storage off: fine */ }
+  }
+  function startResize(event) {
+    event.preventDefault();
+    const handle = event.currentTarget;
+    handle.setPointerCapture?.(event.pointerId);
+    setResizing(true);
+    const right = layoutRef.current.getBoundingClientRect().right;
+    const move = moveEvent => changeWidth(right - moveEvent.clientX - 7);
+    const stop = () => {
+      setResizing(false);
+      handle.removeEventListener('pointermove', move);
+      handle.removeEventListener('pointerup', stop);
+      handle.removeEventListener('pointercancel', stop);
+    };
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', stop);
+    handle.addEventListener('pointercancel', stop);
+  }
+
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [showMap, setShowMap] = useState(true);
   // Dev helper: show the sample hackathon meeting instead of the live one.
@@ -30,8 +71,8 @@ export default function MeetingView({ state: liveState, onEdit: onLiveEdit, onEd
       <button type="button" onClick={() => { onEditingChange?.(false); setShowSample(current => !current); setSelectedNodeId(null); }}>
         {showSample ? 'Back to live meeting' : 'Load sample meeting'}
       </button>
-      <div className="main-content-layout">
-        <div className="main-content-area">
+      <div className="meeting-layout" ref={layoutRef}>
+        <div className="meeting-map-area">
             {!nodes.length ? <p>No topics yet. Send a sample batch or enter test text below.</p> : (
                 showMap ? (
                     <div className="mindmap-frame">
@@ -52,16 +93,33 @@ export default function MeetingView({ state: liveState, onEdit: onLiveEdit, onEd
                 )
             )}
         </div>
-        <aside className="transcript-sidebar">
-             {/* Placeholder for Transcript/Live Output Stream */}
-             <h3>Transcript Stream</h3>
-             {/* This area will now be constrained by the sidebar layout and should contain the transcript component. */}
-             <div className="live-transcript-box" style={{ minHeight: '100%' }}>
-                {/* Actual transcript rendering logic goes here */}
-                <p>Live Transcript Feed...</p>
-             </div>
+        {!transcriptHidden && (
+          <div
+            className={'transcript-resizer' + (resizing ? ' dragging' : '')}
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize transcript"
+            aria-valuemin={MIN_TRANSCRIPT}
+            aria-valuemax={MAX_TRANSCRIPT}
+            aria-valuenow={transcriptWidth}
+            tabIndex={0}
+            onPointerDown={startResize}
+            onKeyDown={event => {
+              if (event.key === 'ArrowLeft') { event.preventDefault(); changeWidth(transcriptWidth + 20); }
+              if (event.key === 'ArrowRight') { event.preventDefault(); changeWidth(transcriptWidth - 20); }
+            }}
+          />
+        )}
+        <aside
+          className={'transcript-side' + (transcriptHidden ? ' collapsed' : '')}
+          style={{ width: transcriptHidden ? undefined : transcriptWidth }}
+        >
+          <button type="button" className="transcript-toggle" onClick={() => setTranscriptHidden(current => !current)}>
+            {transcriptHidden ? 'Show transcript' : 'Hide transcript'}
+          </button>
+          {!transcriptHidden && <TranscriptPanel segments={segments} isRecording={isRecording} />}
         </aside>
-    </div>
+      </div>
       {selected && (
         <section aria-label="Node details" aria-live="polite" className="node-details-panel">
           <button type="button" onClick={() => setSelectedNodeId(null)}>Close node details</button>
