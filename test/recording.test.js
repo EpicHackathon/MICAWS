@@ -46,6 +46,7 @@ test('recording hook and App handle permissions, transcription retries, processi
     return handler(new Request('http://localhost' + url, options));
   });
   const server = await createServer({ server: { middlewareMode: true, ws: false }, appType: 'custom' });
+  t.after(() => server.close());
   const { createRoot } = await import('react-dom/client');
   const { default: App } = await server.ssrLoadModule('/src/App.jsx');
   const root = createRoot(document.getElementById('root'));
