@@ -23,7 +23,9 @@ export async function processTranscript(newSegments, previousState = emptyMeetin
   }
   const body = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new Error(typeof body?.error === 'string' ? body.error : `Processing failed (HTTP ${response.status}).`);
+    const failure = new Error(typeof body?.error === 'string' ? body.error : `Processing failed (HTTP ${response.status}).`);
+    failure.status = response.status;   // 429 = Gemini usage limit reached
+    throw failure;
   }
   const result = meetingSchema.safeParse(body);
   if (!result.success) throw new Error('The server returned an invalid meeting state.');
