@@ -63,6 +63,36 @@ test('Gemini failure, quota, malformed JSON, invalid graph and lost state', asyn
   }
 });
 
+test('Gemini quota falls back in order, remembers exhausted models, and preserves request input', async () => {
+  const env = { GEMINI_API_KEY: 'test-only', GEMINI_MODEL: 'first', GEMINI_MODELS: 'second,third', GEMINI_QUOTA_COOLDOWN_MS: '60000' };
+  const calls = [];
+  const generateText = async (input, _env, model) => {
+    calls.push({ model, input });
+    if (model !== 'third') throw Object.assign(new Error('quota'), { status: 429 });
+    return JSON.stringify(demoStates[0]);
+  };
+  const handler = createHandler({ env, generateText });
+  const original = { newSegments: demoBatches[0], previousState: emptyMeetingState };
+  assert.equal((await send(handler, original.newSegments, original.previousState)).status, 200);
+  assert.deepEqual(calls.map(call => call.model), ['first', 'second', 'third']);
+  // every fallback model gets the same meeting input (plus lockedIds/mapCheck hints for the AI)
+  assert.ok(calls.every(call => JSON.stringify(call.input.newSegments) === JSON.stringify(original.newSegments)
+    && JSON.stringify(call.input.previousState) === JSON.stringify(original.previousState)));
+  calls.length = 0;
+  assert.equal((await send(handler, original.newSegments, original.previousState)).status, 200);
+  assert.deepEqual(calls.map(call => call.model), ['third']);
+});
+
+test('all Gemini models quota limited returns actionable retry without losing input', async () => {
+  const handler = createHandler({
+    env: { GEMINI_API_KEY: 'test-only', GEMINI_MODEL: 'first', GEMINI_MODELS: 'second' },
+    generateText: async () => { throw Object.assign(new Error('quota'), { status: 429 }); },
+  });
+  const response = await send(handler, demoBatches[0]);
+  assert.equal(response.status, 429);
+  assert.match((await response.json()).error, /Pending meeting input is preserved/);
+});
+
 test('caller keeps the last valid state on failure and can retry the same batch', async t => {
   let fail = true;
   t.mock.method(globalThis, 'fetch', async (url, options) => {

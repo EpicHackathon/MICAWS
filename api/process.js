@@ -81,10 +81,10 @@ IMPORTANCE SCORING
 Weight relevance, decisions, depth, task links and topic relationships. Frequency alone is insufficient. Use the scores justified by the meeting without forcing a distribution. The main idea is always 5. Main points typically range 3–4. Details typically range 2–3.
 `;
 
-async function generate(input, env) {
+async function generate(input, env, model) {
   const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY.trim(), httpOptions: { timeout: 45_000 } });
   const result = await ai.models.generateContent({
-    model: env.GEMINI_MODEL?.trim() || 'gemini-3.5-flash-lite',
+    model,
     contents: JSON.stringify(input),
     config: { systemInstruction, responseMimeType: 'application/json', responseJsonSchema: meetingJsonSchema },
   });
@@ -127,6 +127,7 @@ export function mapCheck(state) {
 const error = (status, message, headers) => Response.json({ error: message }, { status, headers });
 
 export function createHandler({ env = process.env, generateText = generate } = {}) {
+  const exhaustedModels = new Map();
   return async function handle(request) {
     if (request.method !== 'POST') return error(405, 'Use POST.', { Allow: 'POST' });
 
@@ -151,14 +152,25 @@ export function createHandler({ env = process.env, generateText = generate } = {
     } else {
       if (!env.GEMINI_API_KEY?.trim()) return error(503, 'Set GEMINI_API_KEY on the server.');
       let output;
-      try {
-        output = await generateText({ newSegments, previousState, lockedIds, mapCheck: mapCheck(previousState) }, env);
-      } catch (cause) {
-        if (Number(cause?.status) === 429) {
-          return error(429, 'Gemini rate limit or quota reached. Wait before retrying.');
+      const models = [...new Set([env.GEMINI_MODEL?.trim() || 'gemini-3.5-flash-lite', ...(env.GEMINI_MODELS || '').split(',').map(model => model.trim()).filter(Boolean)])];
+      const now = Date.now();
+      const cooldown = Math.max(1, Number(env.GEMINI_QUOTA_COOLDOWN_MS) || 60_000);
+      let available = models.filter(model => (exhaustedModels.get(model) || 0) <= now);
+      for (const model of available) {
+        try {
+          output = await generateText({ newSegments, previousState, lockedIds, mapCheck: mapCheck(previousState) }, env, model);
+          break;
+        } catch (cause) {
+          if (Number(cause?.status) !== 429) {
+            return error(502, 'Gemini is unavailable or rejected the request. Check your server configuration and retry.');
+          }
+          exhaustedModels.set(model, Date.now() + cooldown);
         }
-        return error(502, 'Gemini is unavailable or rejected the request. Check your server configuration and retry.');
       }
+      available = models.filter(model => (exhaustedModels.get(model) || 0) <= Date.now());
+      if (output === undefined) return error(429, available.length
+        ? 'All configured Gemini models reached their request quota. Pending meeting input is preserved; retry after the quota cooldown.'
+        : 'All configured Gemini models are temporarily quota limited. Pending meeting input is preserved; retry after the quota cooldown.');
       try {
         candidate = JSON.parse(output);
       } catch {
