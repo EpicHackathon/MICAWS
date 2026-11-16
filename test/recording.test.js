@@ -140,7 +140,7 @@ test('recording hook and App handle permissions, transcription retries, processi
     assert.equal(document.querySelector('[aria-label="Transcript"]'), null);
     assert.ok(document.body.textContent.includes('No topics yet.'));
     assert.equal(button(startLabel).disabled, false);
-    assert.equal(document.querySelector('[aria-label="Meeting summary"]'), null);   // reset clears it
+    assert.equal(document.querySelector('.summary-overview'), null);   // reset clears it
     assert.equal(requests.length, 3);
   } finally {
     await act(async () => root.unmount());

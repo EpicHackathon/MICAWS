@@ -17,7 +17,7 @@ const languages = ['English', 'Spanish', 'French', 'German', 'Portuguese', 'Chin
  * MeetingResults component displays the derived state (Nodes, Edges, Actions) 
  * and controls for processing segments. It is now purely a display layer.
  */
-export function MeetingResults({ segments, isRecording, clearTranscript, onManualSegment, captureBusy, devMode = false, children, onSeek, translations, translationLanguage }) {
+export function MeetingResults({ segments, isRecording, clearTranscript, onManualSegment, captureBusy, devMode = false, children, onSeek, translations, translationLanguage, transcriptTools, recordingPlayer }) {
   // The hook handles state updates based on incoming segments
   const [viewVersion, setViewVersion] = useState(0);
   // True while someone edits the live mind map: AI map updates wait, recording continues.
@@ -42,14 +42,12 @@ export function MeetingResults({ segments, isRecording, clearTranscript, onManua
 
   return (
     <>
-      {children?.({ isProcessing }) || null}
-      <div className="control-actions">
+      <div className="session-toolbar">
+        <div className="session-progress" role="status">{children?.({ isProcessing }) || null}</div>
         <button className="btn-ghost" onClick={resetMeeting}>Reset session</button>
       </div>
 
       {error && <p role="alert" className="error-message">Error: {error}</p>}
-      <label>Map and summary language <select value={outputLanguage} onChange={event => setOutputLanguage(event.target.value)}>{languages.map(language => <option key={language}>{language}</option>)}</select></label>
-      <MeetingMaterials key={'materials-' + viewVersion} materials={materials} onChange={setMaterials}/>
 
       <MeetingView
         key={'view-' + viewVersion}
@@ -63,8 +61,13 @@ export function MeetingResults({ segments, isRecording, clearTranscript, onManua
         summary={meetingSummary.summary}
         onRegenerateSummary={meetingSummary.regenerate}
         onSeek={onSeek} translations={translations} translationLanguage={translationLanguage}
+        mapTools={<label className="field-label">Output language <select aria-label="Map and summary language" value={outputLanguage} onChange={event => setOutputLanguage(event.target.value)}>{languages.map(language => <option key={language}>{language}</option>)}</select></label>}
+        transcriptTools={<>{transcriptTools}<ManualInput key={'input-' + viewVersion} disabled={!onManualSegment} onSubmit={onManualSegment}/></>}
       />
-      <ManualInput key={'input-' + viewVersion} disabled={!onManualSegment} onSubmit={onManualSegment} />
+      <div className="meeting-support-grid">
+        <MeetingMaterials key={'materials-' + viewVersion} materials={materials} onChange={setMaterials}/>
+        {recordingPlayer}
+      </div>
     </>
   );
 }
@@ -120,7 +123,7 @@ export default function App() {
     <main className="app-container">
       <header className="app-header">
         <div className="app-title-row">
-          <h1 className="app-title">Meeting Processor Dashboard</h1>
+          <a className="brand" href="#workspace" aria-label="MICAWS meeting workspace"><span className="brand-mark" aria-hidden="true">M</span>MICAWS<span className="brand-caption">Meeting workspace</span></a>
           {isRecording && (
             <span className="recording-badge">
               <span className="activity-indicator" aria-hidden="true"></span>
@@ -128,9 +131,6 @@ export default function App() {
             </span>
           )}
         </div>
-        <p className="app-status" role="status">
-          Status: {{ idle: 'Ready to record.', starting: 'Waiting for microphone permission…', recording: 'Live recording in progress…', transcribing: 'Finishing pending transcription…' }[microphone.status]}
-        </p>
         <div className="theme-switch" role="group" aria-label="Color theme">
           <button type="button" data-active={theme === 'neutral'} onClick={() => setTheme('neutral')}>Neutral</button>
           <button type="button" data-active={theme === 'warm'} onClick={() => setTheme('warm')}>Warm</button>
@@ -138,13 +138,18 @@ export default function App() {
           <button type="button" data-active={theme === 'dark'} onClick={() => setTheme('dark')}>Dark</button>
         </div>
       </header>
+      <div className="workspace-intro" id="workspace">
+        <div><p className="eyebrow">A little more clarity</p><h1>Your meeting, connected.</h1><p>Capture the conversation. See the bigger picture.</p></div>
+        <p className="app-status" role="status"><span className={'status-dot' + (isRecording ? ' active' : '')} aria-hidden="true"/>
+          {{ idle: 'Ready to record', starting: 'Waiting for microphone permission…', recording: 'Live recording in progress…', transcribing: 'Finishing pending transcription…' }[microphone.status]}
+        </p>
+      </div>
 
       {/* CONTROL PANEL */}
       <div className="control-panel">
         <label>Speech language <select disabled={busy} value={sourceLanguage} onChange={event => setSourceLanguage(event.target.value)}>
           {Object.entries({ auto: 'Detect automatically', en: 'English', es: 'Spanish', fr: 'French', de: 'German', pt: 'Portuguese', zh: 'Chinese', ja: 'Japanese', ko: 'Korean', hi: 'Hindi', ar: 'Arabic' }).map(([code, label]) => <option key={code} value={code}>{label}</option>)}
         </select></label>
-        <label>Translate transcript <select value={translationLanguage} onChange={event => setTranslationLanguage(event.target.value)}><option value="">Original only</option>{languages.map(language => <option key={language}>{language}</option>)}</select></label>
         <button className="btn-primary" onClick={startRecording} disabled={busy}>
           <MicIcon />Start Recording
         </button>
@@ -156,9 +161,6 @@ export default function App() {
       {microphone.status === 'starting' && <p role="status">Waiting for microphone permission…</p>}
       {microphone.status === 'transcribing' && <p role="status">Finishing pending transcription…</p>}
       {microphone.error && <p role="alert">{microphone.error}</p>}
-      <RecordingPlayer recording={microphone.recording} audioRef={microphone.audioRef}/>
-      {translation.busy && <p role="status">Translating transcript… Original text remains available.</p>}
-      {translation.error && <p role="alert">{translation.error} <button onClick={translation.retry}>Retry translation</button></p>}
       {/* The transcript now lives in the side panel next to the mind map (MeetingView). */}
 
       {/* The results component now consumes the recording state */}
@@ -170,6 +172,12 @@ export default function App() {
         devMode={devMode}
         onSeek={microphone.hasRecording ? microphone.seek : undefined}
         translations={translation.texts} translationLanguage={translationLanguage}
+        recordingPlayer={<RecordingPlayer recording={microphone.recording} audioRef={microphone.audioRef}/>}
+        transcriptTools={<>
+          <label className="field-label">Translate transcript <select value={translationLanguage} onChange={event => setTranslationLanguage(event.target.value)}><option value="">Original only</option>{languages.map(language => <option key={language}>{language}</option>)}</select></label>
+          {translation.busy && <p role="status" className="inline-status">Translating… Original text stays available.</p>}
+          {translation.error && <p role="alert" className="inline-status">{translation.error} <button onClick={translation.retry}>Retry translation</button></p>}
+        </>}
         onManualSegment={segment => setSegments(current => [...current, { ...segment, time: nextStart.current }])}
       >
         {({ isProcessing }) => (
@@ -185,7 +193,7 @@ export default function App() {
               {sampleBatch < demoBatches.length ? `Send sample batch ${sampleBatch + 1}` : 'All sample batches sent'}
             </button>}
             <p className={isProcessing ? 'processing-status' : 'idle-status'}>
-                {isProcessing ? '🧠 AI processing current segments...' : `Awaiting input. Segments captured: ${segments.length}`}
+                {isProcessing ? 'Updating your meeting…' : `${segments.length} transcript ${segments.length === 1 ? 'segment' : 'segments'} captured`}
             </p>
           </>
         )}

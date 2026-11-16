@@ -15,6 +15,7 @@ export default function MeetingView({
   state: liveState, onEdit: onLiveEdit, onEditingChange, pendingCount = 0,
   segments = [], isRecording = false, devMode = false, summary = { status: 'idle' },
   onSeek, translations, translationLanguage, onRegenerateSummary,
+  mapTools, transcriptTools,
 }) {
   // Transcript side panel: width (drag the handle) and hide/show.
   const layoutRef = useRef(null);
@@ -68,10 +69,11 @@ export default function MeetingView({
       )}
       <div className="meeting-layout" ref={layoutRef}>
         <div className="meeting-map-area">
+            <div className="panel-heading"><div><span className="eyebrow">Explore ideas</span><h2>Mind map</h2></div>{mapTools}</div>
             {!nodes.length ? (
                 // empty map box (same size as the map) with the message centered inside
                 <div className="mindmap-frame mindmap-empty">
-                    <p>No topics yet. Press Start Recording and the mind map will grow as people talk.</p>
+                    <div><span className="empty-map-symbol" aria-hidden="true">✧</span><h3>Give your ideas room to grow.</h3><p>No topics yet. Press Start Recording and the mind map will grow as people talk.</p><p className="empty-hint">You can also type a thought in the transcript panel.</p></div>
                 </div>
             ) : (
                 <div className="mindmap-frame">
@@ -102,19 +104,20 @@ export default function MeetingView({
           className={'transcript-side' + (transcriptHidden ? ' collapsed' : '')}
           style={{ width: transcriptHidden ? undefined : transcriptWidth }}
         >
-          <button type="button" className="transcript-toggle" onClick={() => setTranscriptHidden(current => !current)}>
+          <button type="button" className="transcript-toggle" aria-expanded={!transcriptHidden} onClick={() => setTranscriptHidden(current => !current)}>
             {transcriptHidden ? 'Show transcript' : 'Hide transcript'}
           </button>
+          {!transcriptHidden && <div className="transcript-tools">{transcriptTools}</div>}
           {!transcriptHidden && <TranscriptPanel segments={segments} isRecording={isRecording} onSeek={onSeek} translations={translations} translationLanguage={translationLanguage} />}
         </aside>
       </div>
       <MeetingOutline state={state} onEdit={onEdit}/>
       <div className="meeting-result-cards">
         {/* End-of-meeting summary (appears after you stop recording, when the map has caught up) */}
-        {!showSample && summary.status !== 'idle' && (
+        {!showSample && (
           <section aria-label="Meeting summary" className="meeting-summary" aria-live="polite">
             <h2>Meeting summary</h2>
-            <button type="button" onClick={onRegenerateSummary} disabled={isRecording || pendingCount > 0 || summary.status === 'loading'}>Regenerate summary</button>
+            {summary.status === 'idle' ? <p className="summary-status">The highlights will appear here when recording finishes and your map is up to date.</p> : <button type="button" onClick={onRegenerateSummary} disabled={isRecording || pendingCount > 0 || summary.status === 'loading'}>Regenerate summary</button>}
             {summary.status === 'loading' && !summary.data && <p className="summary-status">Writing the summary…</p>}
             {summary.status === 'loading' && summary.data && <p className="summary-status">Updating the summary…</p>}
             {summary.status === 'error' && (
@@ -147,12 +150,6 @@ export default function MeetingView({
             : <p className="action-items-empty">No action items yet.</p>}
         </section>
       </div>
-      <details>
-        <summary>Connections ({edges.length})</summary>
-        <ul>{edges.map(edge => (
-          <li key={edge.id}>{nodes.find(node => node.id === edge.source)?.label} → {nodes.find(node => node.id === edge.target)?.label}</li>
-        ))}</ul>
-      </details>
     </section>
   );
 }

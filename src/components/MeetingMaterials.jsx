@@ -62,10 +62,12 @@ export default function MeetingMaterials({ materials = [], onChange }) {
   }
 
   return <section aria-label="Supporting materials" className="meeting-materials">
+    <span className="eyebrow">Bring more context</span>
     <h2>Supporting materials</h2>
-    <p id={descriptionId}>Add PDF, PPTX or UTF-8 TXT background context (10 MB and 50 pages per file; 3 files maximum).
+    <p>Give your meeting a head start with a document or slide deck.</p>
+    <details className="material-help"><summary>Formats, limits & privacy</summary><p id={descriptionId}>Add PDF, PPTX or UTF-8 TXT background context (10 MB and 50 pages per file; 3 files maximum).
       Text is held in this tab until reset or reload. Extracted text is sent to your configured AI provider; Gemini sends it to Google, while local Ollama processes it locally.
-      Images, charts and slide speaker notes are not read.</p>
+      Images, charts and slide speaker notes are not read.</p></details>
     <input ref={input} type="file" accept=".pdf,.pptx,.txt" aria-label="Choose supporting material"
       aria-describedby={descriptionId} onChange={selectFile} hidden />
     <button type="button" onClick={() => choose()} disabled={busy || materials.length >= 3}>Add material</button>

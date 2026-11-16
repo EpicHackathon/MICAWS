@@ -12,7 +12,7 @@ export default function ManualInput({ disabled, onSubmit }) {
     setSubmitted(true);
   }
   return (
-    <details style={{ marginTop: 24 }}>
+    <details className="manual-input">
       <summary>Type meeting text instead of speaking</summary>
       <p>Enter a meeting statement. Mock mode displays quoted input; live mode uses your selected AI provider.</p>
       <form onSubmit={submit}>
