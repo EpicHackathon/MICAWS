@@ -81,7 +81,7 @@ test('recording hook and App handle permissions, transcription retries, processi
     // no ?dev in the address: the dev/backup tools stay hidden
     assert.equal(button('Load sample meeting'), undefined);
     assert.equal(button('Send sample batch 1'), undefined);
-    assert.equal(document.querySelector('textarea'), null);
+    assert.ok(document.querySelector('textarea'), 'Text input is available without developer mode');
 
     const getMicrophone = navigator.mediaDevices.getUserMedia;
     navigator.mediaDevices.getUserMedia = async () => { throw new Error('Permission denied'); };

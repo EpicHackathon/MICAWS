@@ -8,6 +8,7 @@ from typing import Annotated
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from backend.whisperx.transcription import Transcriber
+from whisperx.utils import LANGUAGES
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -36,9 +37,12 @@ def transcribe_audio(
     audio: Annotated[UploadFile, File()],
     chunk_id: Annotated[str, Form()],
     start_seconds: Annotated[float, Form()] = 0.0,
+    language: Annotated[str, Form()] = "auto",
 ) -> list[dict]:
     if not chunk_id.strip() or not math.isfinite(start_seconds) or start_seconds < 0:
         raise HTTPException(400, "Provide a chunk ID and a finite, nonnegative start time.")
+    if language != "auto" and language not in LANGUAGES:
+        raise HTTPException(400, "Unsupported source language. Choose automatic detection or a supported Whisper language.")
     try:
         with TemporaryDirectory(prefix="micaws-") as directory:
             path = Path(directory) / "recording"
@@ -46,7 +50,7 @@ def transcribe_audio(
                 shutil.copyfileobj(audio.file, destination)
             if not path.stat().st_size:
                 raise HTTPException(400, "The recording is empty.")
-            return request.app.state.transcriber.transcribe_chunk(path, chunk_id, start_seconds)
+            return request.app.state.transcriber.transcribe_chunk(path, chunk_id, start_seconds, language=language)
     except HTTPException:
         raise
     except Exception as error:

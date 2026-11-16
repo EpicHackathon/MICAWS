@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from 'vite';
 import { createHandler } from './api/process.js';
 import { createSummaryHandler } from './api/summary.js';
+import { createTranslationHandler } from './api/translate.js';
 
 export default defineConfig(({ mode }) => {
   const env = { ...loadEnv(mode, process.cwd(), ''), ...process.env };
@@ -29,7 +30,7 @@ export default defineConfig(({ mode }) => {
       name: 'local-meeting-api',
       configureServer(server) {
         // /api/process = mind map updates, /api/summary = end-of-meeting summary
-        const handlers = { '/api/process': createHandler({ env }), '/api/summary': createSummaryHandler({ env }) };
+        const handlers = { '/api/process': createHandler({ env }), '/api/summary': createSummaryHandler({ env }), '/api/translate': createTranslationHandler({ env }) };
         server.middlewares.use(async (req, res, next) => {
           const path = req.url?.split('?')[0];
           const handle = handlers[path];

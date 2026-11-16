@@ -13,8 +13,8 @@ export default function ManualInput({ disabled, onSubmit }) {
   }
   return (
     <details style={{ marginTop: 24 }}>
-      <summary>Dev tools — test text</summary>
-      <p>Enter a meeting statement. Mock mode displays quoted input; live mode asks Gemini to analyze it.</p>
+      <summary>Type meeting text instead of speaking</summary>
+      <p>Enter a meeting statement. Mock mode displays quoted input; live mode uses your selected AI provider.</p>
       <form onSubmit={submit}>
         <label htmlFor="manual-transcript">Meeting text</label>
         <textarea id="manual-transcript" rows={4} value={text}

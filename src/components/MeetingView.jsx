@@ -3,6 +3,7 @@ import MindMap from './MindMap.jsx';
 import TranscriptPanel from './TranscriptPanel.jsx';
 import { mockMeeting } from '../shared/mockMeeting.js';
 import './meetingLayout.css';
+import MeetingOutline from './MeetingOutline.jsx';
 
 const MIN_TRANSCRIPT = 220;
 const MAX_TRANSCRIPT = 640;
@@ -13,6 +14,7 @@ const readSavedWidth = () => {
 export default function MeetingView({
   state: liveState, onEdit: onLiveEdit, onEditingChange, pendingCount = 0,
   segments = [], isRecording = false, devMode = false, summary = { status: 'idle' },
+  onSeek, translations, translationLanguage, onRegenerateSummary,
 }) {
   // Transcript side panel: width (drag the handle) and hide/show.
   const layoutRef = useRef(null);
@@ -103,14 +105,16 @@ export default function MeetingView({
           <button type="button" className="transcript-toggle" onClick={() => setTranscriptHidden(current => !current)}>
             {transcriptHidden ? 'Show transcript' : 'Hide transcript'}
           </button>
-          {!transcriptHidden && <TranscriptPanel segments={segments} isRecording={isRecording} />}
+          {!transcriptHidden && <TranscriptPanel segments={segments} isRecording={isRecording} onSeek={onSeek} translations={translations} translationLanguage={translationLanguage} />}
         </aside>
       </div>
+      <MeetingOutline state={state} onEdit={onEdit}/>
       <div className="meeting-result-cards">
         {/* End-of-meeting summary (appears after you stop recording, when the map has caught up) */}
         {!showSample && summary.status !== 'idle' && (
           <section aria-label="Meeting summary" className="meeting-summary" aria-live="polite">
             <h2>Meeting summary</h2>
+            <button type="button" onClick={onRegenerateSummary} disabled={isRecording || pendingCount > 0 || summary.status === 'loading'}>Regenerate summary</button>
             {summary.status === 'loading' && !summary.data && <p className="summary-status">Writing the summary…</p>}
             {summary.status === 'loading' && summary.data && <p className="summary-status">Updating the summary…</p>}
             {summary.status === 'error' && (
@@ -134,7 +138,12 @@ export default function MeetingView({
         )}
         <section aria-label="Meeting action items" className="meeting-action-card">
           <h2>Meeting action items ({actionItems.length})</h2>
-          {actionItems.length ? <ul className="action-items">{actionItems.map(item => <li key={item.id}>{item.text}</li>)}</ul>
+          {actionItems.length ? <ul className="action-items">{actionItems.map(item => <li key={item.id}>{item.text}
+            {onEdit && <details><summary>Edit task</summary><form key={item.text} onSubmit={event => { event.preventDefault(); const text = new FormData(event.currentTarget).get('task').trim(); if (text) onEdit(current => ({ ...current, actionItems: current.actionItems.map(task => task.id === item.id ? { ...task, text } : task) })); }}>
+              <label>Task text <input name="task" defaultValue={item.text} required/></label><button type="submit">Save task</button>
+              <button type="button" onClick={() => onEdit(current => ({ ...current, actionItems: current.actionItems.filter(task => task.id !== item.id) }))}>Delete task</button>
+            </form></details>}
+          </li>)}</ul>
             : <p className="action-items-empty">No action items yet.</p>}
         </section>
       </div>

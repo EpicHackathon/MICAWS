@@ -16,6 +16,7 @@ export const processorTiming = {
 const freshMeeting = () => ({
   state: emptyMeetingState, cursor: 0, request: null, editsDuringRequest: [], failures: 0, retryTimer: null,
   locked: new Set(), lastCallAt: 0, lastReassessmentAt: null, limited: false,
+  deletedNodes: new Map(), deletedTaskIds: new Set(), lockedTaskIds: new Set(), dirty: false,
 });
 
 const MAX_HISTORICAL_SEGMENTS = 16;
@@ -79,17 +80,29 @@ function changedIds(before, after) {
 
 // paused: while someone is editing the map, hold AI map updates. Recording and the transcript
 // keep going; when paused turns off, everything said in the meantime is processed at once.
-export function useMeetingProcessor(segments, isRecording, intervalMs = 10_000, { paused = false } = {}) {
+export function useMeetingProcessor(segments, isRecording, intervalMs = 10_000, { paused = false, materials = [], outputLanguage = 'English' } = {}) {
+  const [revision, setRevision] = useState(0);
   const [state, setState] = useState(emptyMeetingState);
   const [error, setError] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   // editsDuringRequest: hand edits made while the AI is working; replayed on its answer.
   const meeting = useRef(freshMeeting());
-  const latest = useRef({ segments, isRecording, paused });
+  const latest = useRef({ segments, isRecording, paused, materials, outputLanguage });
+  const contextKey = JSON.stringify({ materials, outputLanguage });
+  const previousContext = useRef(contextKey);
 
   useLayoutEffect(() => {
-    latest.current = { segments, isRecording, paused };
-  }, [segments, isRecording, paused]);
+    latest.current = { segments, isRecording, paused, materials, outputLanguage };
+    if (previousContext.current !== contextKey) {
+      previousContext.current = contextKey;
+      const current = meeting.current;
+      current.request?.abort();
+      current.request = null;
+      current.dirty = true;
+      setIsProcessing(false);
+      setRevision(value => value + 1);
+    }
+  }, [segments, isRecording, paused, contextKey]);
 
   const processPending = useCallback(async function drain() {
     const current = meeting.current;
@@ -98,7 +111,7 @@ export function useMeetingProcessor(segments, isRecording, intervalMs = 10_000, 
     if (current.request) return;
     const hasPending = end > current.cursor;
     const historicalContext = selectHistoricalContext(latest.current.segments, current.cursor);
-    const reassessment = current.state.nodes.length > 0
+    const reassessment = current.dirty || current.state.nodes.length > 0
       && historicalContext.length > 0
       && current.lastReassessmentAt !== null
       && Date.now() - current.lastReassessmentAt >= processorTiming.reassessmentIntervalMs;
@@ -134,9 +147,14 @@ export function useMeetingProcessor(segments, isRecording, intervalMs = 10_000, 
           lockedIds: [...current.locked],
           historicalContext,
           reassessment,
+          materials: latest.current.materials,
+          outputLanguage: latest.current.outputLanguage,
+          deletedNodes: [...current.deletedNodes.values()],
+          deletedTaskIds: [...current.deletedTaskIds],
+          lockedTaskIds: [...current.lockedTaskIds],
         },
       );
-      if (meeting.current !== current) return;
+      if (meeting.current !== current || current.request !== controller || controller.signal.aborted) return;
       // The AI answered based on the map from before any edits made meanwhile: replay them.
       let merged = next;
       for (const edit of current.editsDuringRequest) {
@@ -145,6 +163,7 @@ export function useMeetingProcessor(segments, isRecording, intervalMs = 10_000, 
       current.editsDuringRequest = [];
       current.cursor = end;
       current.state = merged;
+      current.dirty = false;
       if (reassessment || current.lastReassessmentAt === null) {
         current.lastReassessmentAt = Date.now();
       }
@@ -152,7 +171,7 @@ export function useMeetingProcessor(segments, isRecording, intervalMs = 10_000, 
       current.failures = 0;
       succeeded = true;
     } catch (cause) {
-      if (meeting.current === current) {
+      if (meeting.current === current && current.request === controller && !controller.signal.aborted) {
         // Nothing is lost (the cursor didn't move): try the same lines again after a pause.
         const limited = cause.status === 429;
         const delays = limited ? processorTiming.limitDelays : processorTiming.retryDelays;
@@ -165,7 +184,7 @@ export function useMeetingProcessor(segments, isRecording, intervalMs = 10_000, 
         current.retryTimer = setTimeout(() => { current.retryTimer = null; void drain(); }, delay);
       }
     } finally {
-      if (meeting.current === current) {
+      if (meeting.current === current && current.request === controller) {
         current.request = null;
         setIsProcessing(false);
       }
@@ -185,7 +204,7 @@ export function useMeetingProcessor(segments, isRecording, intervalMs = 10_000, 
 
   useEffect(() => {
     void processPending();
-  }, [isRecording, segments.length, paused, processPending]);   // un-pausing catches up
+  }, [isRecording, segments.length, paused, revision, processPending]);
 
   // Apply a hand edit (move / rename / delete) from the mind map.
   // `edit` is a function state -> new state (see src/shared/mapEdits.js); it may throw to refuse.
@@ -194,9 +213,22 @@ export function useMeetingProcessor(segments, isRecording, intervalMs = 10_000, 
     const current = meeting.current;
     const next = edit(current.state);   // throws -> caller shows the message
     for (const id of changedIds(current.state, next)) current.locked.add(id);
+    for (const node of current.state.nodes) {
+      if (!next.nodes.some(item => item.id === node.id)) current.deletedNodes.set(node.id, { id: node.id, label: node.label, summary: node.summary });
+    }
+    for (const task of current.state.actionItems) {
+      if (!next.actionItems.some(item => item.id === task.id)) current.deletedTaskIds.add(task.id);
+    }
+    for (const task of next.actionItems) {
+      if (current.state.actionItems.find(item => item.id === task.id)?.text !== task.text) current.lockedTaskIds.add(task.id);
+    }
+    current.request?.abort();
+    current.request = null;
+    current.dirty = true;
     current.state = next;
-    if (current.request) current.editsDuringRequest.push(edit);
     setState(next);
+    setIsProcessing(false);
+    setRevision(value => value + 1);
   }, []);
 
   const invalidate = useCallback(() => {
@@ -217,7 +249,8 @@ export function useMeetingProcessor(segments, isRecording, intervalMs = 10_000, 
   }, [invalidate]);
 
   // Transcript lines said but not yet on the map (shown while editing pauses updates).
-  const pendingCount = Math.max(0, segments.length - meeting.current.cursor);
+  const pendingCount = Math.max(0, segments.length - meeting.current.cursor) + (meeting.current.dirty ? 1 : 0);
 
-  return { state, isProcessing, error, processPending, reset, applyEdit, pendingCount };
+  return { state, isProcessing, error, processPending, reset, applyEdit, pendingCount,
+    context: { materials, outputLanguage, deletedNodes: [...meeting.current.deletedNodes.values()], deletedTaskIds: [...meeting.current.deletedTaskIds], lockedTaskIds: [...meeting.current.lockedTaskIds] } };
 }

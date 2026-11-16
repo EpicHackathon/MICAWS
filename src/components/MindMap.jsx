@@ -1,3 +1,4 @@
+import { arrangeForest } from '../shared/forestLayout.js';
 import React, { useState, useEffect, useRef } from 'react';
 import { ReactFlow, Background, Controls, Panel, useReactFlow } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -17,9 +18,9 @@ const BUBBLE_START = 0;    // bubble: first child at 3 o'clock (0), going clockw
 
 // Which level is this box? Look at its parent.
 // (Works for any depth: anything below a main point uses the detail pill shape.)
-function getLevel(node, mainIdea) {
+function getLevel(node, rootIds) {
   if (node.parentId === null) return 'main';              // no parent -> main idea
-  if (node.parentId === mainIdea?.id) return 'point';     // parent is the main idea -> main point
+  if (rootIds.has(node.parentId)) return 'point';     // parent is the main idea -> main point
   return 'detail';                                        // anything deeper -> detail
 }
 
@@ -254,15 +255,15 @@ export default function MindMap({
     if (!sameMeeting) { setUnread(new Set()); return; }
 
     // Live update: find what changed, then point the dot at its MAIN POINT.
-    const main = allNodes.find(node => node.parentId === null);
+    const mainIds = new Set(allNodes.filter(node => node.parentId === null).map(node => node.id));
     const byId = new Map(allNodes.map(node => [node.id, node]));
     const pointsToDot = new Set();
     for (const node of allNodes) {
       if (before.get(node.id) === now.get(node.id)) continue;      // unchanged
       // walk up until we reach the main point this topic belongs to
       let current = node;
-      while (current && current.parentId !== null && current.parentId !== main?.id) current = byId.get(current.parentId);
-      if (current && current.parentId === main?.id) pointsToDot.add(current.id);
+      while (current && current.parentId !== null && !mainIds.has(current.parentId)) current = byId.get(current.parentId);
+      if (current && mainIds.has(current.parentId)) pointsToDot.add(current.id);
     }
     pointsToDot.delete(focusRef.current);   // you're already looking at that one
     if (pointsToDot.size) setUnread(current => new Set([...current, ...pointsToDot]));
@@ -276,11 +277,12 @@ export default function MindMap({
     });
   }
 
-  const mainIdea = allNodes.find(node => node.parentId === null);
+  const roots = allNodes.filter(node => node.parentId === null);
+  const rootIds = new Set(roots.map(node => node.id));
 
   // Who sits at the TOP of the tree right now?
   // Big picture / show all: the main idea. Zoomed in: the main point you clicked.
-  const top = focusId ?? mainIdea?.id;
+  const top = focusId;
   const fullView = showAll && !focusId;
 
   // Which boxes are visible?
@@ -288,7 +290,7 @@ export default function MindMap({
   //  - Otherwise: the top box + its children.
   const nodes = fullView
     ? allNodes
-    : allNodes.filter(node => node.id === top || node.parentId === top);
+    : allNodes.filter(node => top ? node.id === top || node.parentId === top : node.parentId === null || rootIds.has(node.parentId));
   const visibleIds = new Set(nodes.map(node => node.id));
   const edges = allEdges
     .filter(edge => visibleIds.has(edge.source) && visibleIds.has(edge.target))
@@ -302,7 +304,7 @@ export default function MindMap({
   // Size of every visible box (see estimateHeight).
   const size = new Map(nodes.map(node => {
     const isFocus = node.id === focusId;
-    const level = getLevel(node, mainIdea);
+    const level = getLevel(node, rootIds);
     return [node.id, {
       width: isFocus ? FOCUS_WIDTH : BOX_WIDTH[level],
       // Use the REAL height React Flow measured; the estimate is only for the first instant
@@ -312,10 +314,10 @@ export default function MindMap({
     }];
   }));
   const kidsOf = id => nodes.filter(node => node.parentId === id);
-  const root = nodes.find(node => node.id === top);
+  const visibleRoots = top ? nodes.filter(node => node.id === top) : roots;
   // Show all + Tree uses the narrow "outline" layout (details stack downward under each point).
   const compact = mapStyle === 'tree' && fullView;
-  const positions = root ? layout(mapStyle, root, kidsOf, size, compact) : new Map();
+  const positions = arrangeForest(visibleRoots.map(root => layout(mapStyle, root, kidsOf, size, compact)), size);
 
   const sides = LINE_SIDES[mapStyle];
   // Which sides the lines attach to. Outline tree: main idea -> points from the top,
@@ -323,7 +325,7 @@ export default function MindMap({
   const sidesFor = node => {
     if (!compact) return sides;
     if (node.parentId === null) return { source: 'bottom', target: 'top' };
-    if (node.parentId === mainIdea?.id) return { source: 'left', target: 'top' };
+    if (rootIds.has(node.parentId)) return { source: 'left', target: 'top' };
     return { source: 'left', target: 'left' };
   };
 
@@ -432,7 +434,7 @@ export default function MindMap({
   const editingBranchSize = editingNode ? subtreeIds({ nodes: allNodes }, editingNode.id).size - 1 : 0;
 
   const flowNodes = nodes.map(node => {
-    const level = getLevel(node, mainIdea);
+    const level = getLevel(node, rootIds);
     const isFocus = node.id === focusId;   // the main point you zoomed into
 
     // Zoomed-in main point shows its summary under the title. Everything else: just the label.
@@ -463,7 +465,7 @@ export default function MindMap({
       className: `shape-${level}${isFocus ? ' is-focus' : ''}${hasUnread ? ' has-unread' : ''}${clickable && level === 'detail' ? ' has-kids' : ''}`
         + `${node.id === dropTargetId ? ' drop-target' : ''}${editMode && node.id === editingId ? ' edit-selected' : ''}`,   // <- picks the shape
       selected: node.id === selectedNodeId,                         // Micah: highlight the box shown in the details panel
-      draggable: editMode && level !== 'main',                      // the main idea stays put
+      draggable: editMode,                      // the main idea stays put
       ariaLabel: node.label + (hasUnread ? ', has new updates' : '') + ', importance ' + node.importance + ' out of 5.'
         + (editMode ? ' Edit mode: select to rename or delete.' : ' Select to open.'),
       sourcePosition: lineSides.source,
@@ -479,7 +481,7 @@ export default function MindMap({
     // Micah's details panel still opens from the topic list view.
     // Main points ALWAYS open (even with no details yet: you still see their summary card).
     // Deeper boxes open when they have their own sub-details.
-    const isMainPoint = clicked.parentId === mainIdea?.id;
+    const isMainPoint = rootIds.has(clicked.parentId);
     if (clicked.parentId !== null && clicked.id !== focusId && (isMainPoint || hasKids(clicked.id))) {
       setFocusId(clicked.id);
       setShowAll(false);
@@ -492,7 +494,7 @@ export default function MindMap({
     if (!focusId) return;
     markRead([focusId]);
     const parentId = allNodes.find(node => node.id === focusId)?.parentId;
-    setFocusId(parentId && parentId !== mainIdea?.id ? parentId : null);
+    setFocusId(parentId && !rootIds.has(parentId) ? parentId : null);
   }
 
   // Click empty space -> up one level (does nothing in the big picture / Show all).
@@ -594,9 +596,7 @@ export default function MindMap({
               {!confirmDelete ? (
                 <div className="edit-actions">
                   <button type="submit" className="edit-save">Save</button>
-                  {editingNode.parentId !== null && (
-                    <button type="button" className="edit-delete" onClick={() => setConfirmDelete(true)}>Delete</button>
-                  )}
+                  <button type="button" className="edit-delete" onClick={() => setConfirmDelete(true)}>Delete</button>
                   <button type="button" onClick={() => setEditingId(null)}>Close</button>
                 </div>
               ) : (
@@ -617,6 +617,16 @@ export default function MindMap({
                   </div>
                 </div>
               )}
+              <label htmlFor="edit-parent">Move to</label>
+              <select id="edit-parent" value={editingNode.parentId ?? ''} onChange={event => {
+                const parentId = event.target.value || null;
+                tryEdit(state => moveNode(state, editingNode.id, parentId));
+              }}>
+                <option value="">Independent tree</option>
+                {allNodes.filter(node => !subtreeIds({ nodes: allNodes }, editingNode.id).has(node.id)).map(node => (
+                  <option key={node.id} value={node.id}>{node.label}</option>
+                ))}
+              </select>
               <div className="edit-add">
                 <label htmlFor="edit-node-add">Add a topic inside “{editingNode.label}”</label>
                 <div className="edit-add-row">
@@ -643,6 +653,10 @@ export default function MindMap({
         )}
         <Panel position="top-right">
           <div className="map-controls">
+            {onEdit && <button type="button" className="show-all-toggle" onClick={() => {
+              const label = window.prompt('Name the new tree');
+              if (label?.trim()) tryEdit(state => addNode(state, null, { label }));
+            }}>New tree</button>}
             {onEdit && (
               <button
                 type="button"

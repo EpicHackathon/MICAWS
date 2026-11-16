@@ -1,8 +1,9 @@
-export async function transcribeAudio(audio, signal, { chunkId = crypto.randomUUID(), startSeconds = 0 } = {}) {
+export async function transcribeAudio(audio, signal, { chunkId = crypto.randomUUID(), startSeconds = 0, language = 'auto' } = {}) {
   const form = new FormData();
   form.append('audio', audio, 'recording.wav');
   form.append('chunk_id', chunkId);
   form.append('start_seconds', String(startSeconds));
+  form.append('language', language);
   const timeout = AbortSignal.timeout(120_000);
   let response;
   try {

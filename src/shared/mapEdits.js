@@ -45,14 +45,13 @@ export function moveNode(state, id, newParentId) {
   const nodes = byId(state);
   const node = nodes.get(id);
   const parent = nodes.get(newParentId);
-  if (!node || !parent) throw new Error('That topic no longer exists.');
-  if (node.parentId === null) throw new Error("The main idea can't be moved.");
+  if (!node || (newParentId !== null && !parent)) throw new Error('That topic no longer exists.');
   if (node.parentId === newParentId) return state;   // already there
   if (subtreeIds(state, id).has(newParentId)) throw new Error("A topic can't go inside its own branch.");
-  if (levelOf(nodes, newParentId) + branchHeight(state, id) > MAX_LEVELS) {
+  if ((newParentId === null ? 0 : levelOf(nodes, newParentId)) + branchHeight(state, id) > MAX_LEVELS) {
     throw new Error(`That would make the map deeper than ${MAX_LEVELS} levels.`);
   }
-  const next = state.nodes.map(n => (n.id === id ? { ...n, parentId: newParentId } : n));
+  const next = state.nodes.map(n => (n.id === id ? { ...n, parentId: newParentId, importance: newParentId === null ? 5 : Math.min(n.importance, 4) } : n));
   return { ...state, nodes: next, edges: rebuildEdges(next) };
 }
 
@@ -79,7 +78,6 @@ export function moveOut(state, id) {
   if (!node) throw new Error('That topic no longer exists.');
   if (node.parentId === null) throw new Error("The main idea can't be moved.");
   const parent = nodes.get(node.parentId);
-  if (parent.parentId === null) throw new Error('This is already a main point, so it can’t go any higher.');
   return moveNode(state, id, parent.parentId);
 }
 
@@ -88,7 +86,7 @@ export function addNode(state, parentId, { label, summary } = {}) {
   const nodes = byId(state);
   const parent = nodes.get(parentId);
   const title = typeof label === 'string' ? label.trim() : '';
-  if (!parent) throw new Error('That topic no longer exists.');
+  if (parentId !== null && !parent) throw new Error('That topic no longer exists.');
   if (!title) throw new Error('Give the new topic a title.');
   if (levelOf(nodes, parentId) + 1 > MAX_LEVELS) throw new Error(`That would make the map deeper than ${MAX_LEVELS} levels.`);
   let id;
@@ -97,7 +95,7 @@ export function addNode(state, parentId, { label, summary } = {}) {
     id,
     label: title,
     summary: (typeof summary === 'string' && summary.trim()) || title,
-    importance: parent.parentId === null ? 4 : 2,   // only the main idea is 5
+    importance: parentId === null ? 5 : parent.parentId === null ? 4 : 2,
     parentId,
   };
   const next = [...state.nodes, node];
@@ -108,8 +106,7 @@ export function addNode(state, parentId, { label, summary } = {}) {
 export function deleteNode(state, id) {
   const node = state.nodes.find(n => n.id === id);
   if (!node) return state;
-  if (node.parentId === null) throw new Error("The main idea can't be deleted. Use Reset session to start over.");
   const gone = subtreeIds(state, id);
   const next = state.nodes.filter(n => !gone.has(n.id));
-  return { ...state, nodes: next, edges: rebuildEdges(next) };
+  return { ...state, nodes: next, edges: rebuildEdges(next), actionItems: next.length ? state.actionItems : [] };
 }

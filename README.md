@@ -4,7 +4,7 @@ MICAWS (Meeting Processor) turns live meeting audio into an editable mind map, a
 
 While recording, the browser captures microphone audio in 10-second chunks, sends them to a Python WhisperX transcription server, and streams new transcript segments to a mind-map API (Gemini or Ollama). The API returns the full updated meeting state — nodes, edges, action items — and the React UI renders it with [React Flow](https://reactflow.dev/).
 
-You can also add free-form **meeting notes** during the call. Notes are treated as an extra source of truth: the mind map and summary adapt to them. After recording, you can regenerate the summary at any time to incorporate new notes or transcript text.
+You can type meeting text, attach supporting PDF/PPTX/TXT materials, edit multiple topic trees, translate the transcript, and download the recording. The complete upgrade setup and limitations are documented below.
 
 ## Project structure
 
@@ -30,7 +30,7 @@ MICAWS/
       MeetingView.jsx    Map + transcript side panel + notes card + summary
       MindMap.jsx        React Flow mind map with inline edit panel
       TranscriptPanel.jsx Scrolling transcript list
-      ManualInput.jsx    Dev-mode manual transcript injection
+      ManualInput.jsx    Accessible typed meeting input
       MicIcon.jsx / StopIcon.jsx
       meetingLayout.css  Map/transcript layout + notes card styling
       mindmap.css        Node layout and styles for tree/linear/bubble views
@@ -107,8 +107,48 @@ Outputs to `dist/`.
 
 ## What the AI is told (system prompts)
 
-**Mind map** (`api/process.js`): Review existing topics, merge similar ones, add new information from transcript, keep 3–5 main points, never delete locked or user-added nodes, never delete user notes, max 5 levels, max 4 children per node.
+**Mind map** (`api/process.js`): Review existing topics, merge similar ones, add new information from transcript, group related topics without inventing categories, never delete locked or user-added nodes, never delete user notes, max 5 levels, max 4 children per node.
 
 **Summary** (`api/summary.js`): Write overview (2–4 sentences), key points (3–6), and next-time follow-ups (0–5). Ground everything in the transcript, map, and user notes. Never invent facts.
 
 
+
+## Meeting upgrade: forests, materials, playback and languages
+
+### Getting started
+
+Use Node 22.12 or newer in the Node 22 series. Run `npm.cmd ci` after pulling this upgrade. Copy `.env.example` to `.env.local` only if that file does not exist; preserve your existing key. Start Vite with `npm.cmd run dev`. For microphone input, start a second terminal with `powershell -ExecutionPolicy Bypass -File scripts/start-transcription.ps1` and wait for **Application startup complete**. See LIVE_TRANSCRIPTION.md for Python 3.11 environment and FFmpeg installation. Restart the Python server after upgrading its code.
+
+Choose `MEETING_MOCK=true` for simulated processing. For actual AI reasoning and translation, set `MEETING_MOCK=false` and either configure Gemini or set `AI_PROVIDER=ollama`, `OLLAMA_MODEL=qwen3:8b`, run `ollama pull qwen3:8b`, and keep Ollama running. Restart Vite after environment changes. Model availability, quality, speed and language coverage depend on the chosen provider. Gemini sends submitted transcript, current map and attached extracted text to Google; Ollama sends them to your configured Ollama server.
+
+### Editing and multiple trees
+
+A meeting can now contain several independent roots. Single-root meetings remain valid. AI grouping is evidence-based: unrelated subjects can form separate trees, related details stay together, and a genuinely single-topic discussion is not padded with invented categories. Layouts arrange separate trees with spacing. Use the map editor or **Accessible outline and keyboard editing** to create trees, rename topics, add children, move a topic to another tree, promote a topic to an independent tree, or delete a branch. Five levels remain the maximum. Cycles and orphaned nodes are rejected.
+
+Manual edits trigger reassessment without requiring new speech. Changed nodes and tasks are protected; deliberate deletions are included in subsequent AI context. Requests made before an edit are invalidated. Summaries are keyed to the map and context, not just transcript length. Generated tasks may change during reassessment; explicitly edited tasks retain their wording. Deleted topic IDs and exact normalized labels are blocked from automatic recreation, but semantic paraphrase avoidance still depends on the AI. Locked manual wording is not automatically translated.
+
+### Supporting documents
+
+Upload PDF, PPTX (not legacy PPT), or UTF-8 TXT through Meeting materials. Limits: three documents, 10 MB each, 50 pages/slides each, 30,000 extracted characters each, and 60,000 combined characters. Extracted text previews show page/slide references. Add, replace, cancel and remove are supported. Changes trigger reassessment of derived content. Document statements are background information, not agreed meeting commitments.
+
+Extraction happens in the browser. Files and extracted text remain in page memory; nothing is persistently uploaded as a document. Extracted text is sent to the selected AI provider when processing. Scans and image-only slides need OCR first; this version does not perform OCR. Mixed documents disclose pages with no extractable text. Password-protected, corrupt and oversized documents are rejected with an error. Resetting or reloading clears documents.
+
+### Recording and playback
+
+After capture stops, the recording appears with native playback controls and a WAV download link, even if transcription is awaiting retry. Click a transcript timestamp to seek to that recording time. Stop/resume intervals are concatenated: real-world pauses are omitted. Failed transcription retries do not duplicate audio. The archive is limited to approximately 64 MiB of PCM; recording stops when the limit is reached. Download and start a new session for longer meetings.
+
+Recordings and pending audio are memory-only and do not survive reload, reset or closing the tab. Reset explains this and asks for confirmation; the browser receives an unload warning when audio is present. Download first. A typed transcript or sample batch has no corresponding recorded speech.
+
+### Accessibility and languages
+
+Keyboard users can use the editable outline instead of the visual map. Visible focus, reduced-motion support, labeled controls, text input, status announcements and keyboard resizing are available. Typed meeting text is available without developer mode.
+
+Select Speech language before recording, or use automatic detection. WhisperX uses its multilingual base model to transcribe original speech; it does not translate the transcript. Automatic detection runs on short chunks and may be inaccurate for brief speech or language switching; select the known language for better reliability. The UI exposes English, Spanish, French, German, Portuguese, Chinese, Japanese, Korean, Hindi and Arabic.
+
+Translate transcript selects a separate AI translation, displayed alongside original text with unchanged timestamps and speakers. Original text stays available when translation fails; use Retry translation. Map and summary language independently controls generated map, task and summary text. Translation needs live Gemini/Ollama mode and consumes AI requests; mock mode does not pretend to translate. Quality must be checked by speakers of the target language.
+
+### Deployment and verification
+
+Vercel serves the JavaScript AI endpoints, but cannot access services on your laptop's localhost. Host transcription separately with appropriate access controls and a supported frontend route. A local Ollama server needs a reachable server-side address for remote deployments. In Docker Desktop, accessing host Ollama may require `OLLAMA_URL=http://host.docker.internal:11434`; do not expose an unauthenticated Ollama service publicly. Browser extraction and memory-only playback need no file-storage server.
+
+Run `node --test --test-concurrency=1` and `npm.cmd run build`. Python transcription unit checks: `.\.venv-whisperx\Scripts\python.exe -m unittest discover -s test -p backend_transcription_test.py`. Automated tests use simulated AI and microphone replies; document tests parse generated PDF/PPTX fixtures and recording tests inspect WAV bytes. Live microphone, multilingual recognition/translation quality, Docker and deployed hosting require separate end-to-end checks. AI semantic grouping and task accuracy are not guaranteed by schema validation.

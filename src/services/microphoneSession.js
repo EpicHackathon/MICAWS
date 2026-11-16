@@ -5,12 +5,15 @@ import { transcribeAudio } from './transcribeAudio.js';
 export const RETRY_DELAYS_MS = [1000, 2000, 4000, 8000, 15000, 30000];
 
 export class MicrophoneSession {
-  constructor({ onTranscript, onStatus, onError, startSeconds = 0, retryDelays = RETRY_DELAYS_MS }) {
+  constructor({ onTranscript, onStatus, onError, onAudioChunk, onCaptureDone, language = 'auto', startSeconds = 0, retryDelays = RETRY_DELAYS_MS }) {
     this.retryDelays = retryDelays;
     this.failures = 0;   // failures in a row (resets after a chunk works)
     this.onTranscript = onTranscript;
     this.onStatus = onStatus;
     this.onError = onError;
+    this.onAudioChunk = onAudioChunk;
+    this.onCaptureDone = onCaptureDone;
+    this.language = language;
     this.startSeconds = startSeconds;
     this.id = crypto.randomUUID();
     this.controller = new AbortController();
@@ -83,7 +86,9 @@ export class MicrophoneSession {
         chunkId: `${this.id}-${data.startSample}`,
         startSeconds,
         endSeconds: startSeconds + data.samples.length / data.sampleRate,
+        language: this.language,
       });
+      if (this.onAudioChunk?.(data.samples, data.sampleRate, startSeconds) === false) this.stop();
       // Bound memory if inference cannot keep up with capture.
       if (this.queue.length >= 12 && !this.stopping) {
         this.onError('Transcription is falling behind. Recording stopped so the remaining audio can finish processing.');
@@ -156,6 +161,7 @@ export class MicrophoneSession {
     this.node?.disconnect();
     this.node?.port.close();
     if (this.context && this.context.state !== 'closed') void this.context.close().catch(() => {});
+    if (this.captureDone && !this.cancelled) this.onCaptureDone?.();
   }
 
   cancel() {

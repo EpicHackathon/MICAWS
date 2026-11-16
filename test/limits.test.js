@@ -24,7 +24,7 @@ async function setup(t) {
   const root = createRoot(document.getElementById('root'));
   const seen = {};
   function Probe(props) {
-    Object.assign(seen, useMeetingProcessor(props.segments, props.isRecording, 1_000_000));
+    Object.assign(seen, useMeetingProcessor(props.segments, props.isRecording, 1_000_000, props.options));
     return null;
   }
   const render = props => act(async () => root.render(React.createElement(Probe, props)));
@@ -39,7 +39,7 @@ async function setup(t) {
 
 test('Gemini limit (429): waits longer, says so, then catches up with nothing lost', async t => {
   const { render, seen } = await setup(t);
-  Object.assign(processorTiming, { retryDelays: [5], limitDelays: [80] });
+  Object.assign(processorTiming, { retryDelays: [5], limitDelays: [500] });
   const mock = createHandler({ env: { MEETING_MOCK: 'true' } });
   const calls = [];
   t.mock.method(globalThis, 'fetch', async (url, options) => {
@@ -58,7 +58,7 @@ test('Gemini limit (429): waits longer, says so, then catches up with nothing lo
   await render({ segments: [line(0, 'We decided to launch next week'), line(3, 'Budget is fine')], isRecording: false });
   await sleep(10);
   assert.equal(calls.length, 1);
-  await sleep(80);
+  await sleep(500);
   assert.equal(calls.length, 2);
   assert.equal(seen.error, null);
   assert.ok(seen.state.nodes.length > 0);
@@ -87,4 +87,33 @@ test('while recording, AI calls are spaced out; lines wait and go together', asy
   assert.equal(bodies.length, 2);
   assert.equal(bodies[1].newSegments.length, 2, 'the two waiting lines went in ONE call');
   assert.equal(seen.pendingCount, 0);
+});
+
+test('document removal and edits invalidate in-flight answers and reassess without new speech', async t => {
+  const { render, seen } = await setup(t);
+  const bodies = [];
+  let finishOld;
+  const state = { nodes: [{ id: 'user-root', parentId: null, importance: 5, label: 'Manual topic', summary: 'Keep this edit.' }], edges: [], actionItems: [] };
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    const input = JSON.parse(options.body); bodies.push(input);
+    if (bodies.length === 1) return new Promise(resolve => { finishOld = resolve; });
+    return Response.json(input.previousState);
+  });
+  const segments = [line(0, 'Original speech')];
+  await render({ segments, isRecording: false });
+  await act(async () => seen.applyEdit(() => state));
+  await sleep(10);
+  assert.equal(bodies[1].reassessment, true);
+  assert.deepEqual(bodies[1].lockedIds, ['user-root']);
+  await act(async () => finishOld(Response.json({nodes:[], edges:[], actionItems:[]})));
+  assert.equal(seen.state.nodes[0].label, 'Manual topic');
+  const materials = [{id:'doc',name:'reference.txt',pages:[{page:1,text:'Background'}]}];
+  await render({segments,isRecording:false,options:{materials}});
+  await sleep(10);
+  assert.equal(bodies.at(-1).materials.length,1);
+  await render({segments,isRecording:false,options:{materials:[]}});
+  await sleep(10);
+  assert.equal(bodies.at(-1).materials.length,0);
+  assert.equal(bodies.at(-1).newSegments.length,0);
+  assert.equal(bodies.at(-1).reassessment,true);
 });

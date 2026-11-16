@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { contextFields } from './contextSchema.js';
 
 const text = z.string().refine(value => value.trim().length > 0, 'Expected nonblank text');
 const node = z.strictObject({
@@ -27,7 +28,7 @@ export const meetingSchema = stateShape.superRefine((state, ctx) => {
   const nodes = new Map(state.nodes.map(node => [node.id, node]));
   const roots = state.nodes.filter(node => node.parentId === null);
   // Before meaningful speech, the complete meeting state may be empty.
-  if (state.nodes.length && roots.length !== 1) issue(['nodes'], 'Expected exactly one root');
+  if (state.nodes.length && !roots.length) issue(['nodes'], 'Expected at least one tree root');
   if (!state.nodes.length && state.actionItems.length) issue(['actionItems'], 'Tasks require a meeting root');
 
   state.nodes.forEach((node, index) => {
@@ -72,6 +73,7 @@ export const meetingSchema = stateShape.superRefine((state, ctx) => {
 });
 
 export const requestSchema = z.strictObject({
+  ...contextFields,
   newSegments: z.array(z.strictObject({
     time: z.number().nonnegative(), speaker: z.string().nullable(), text: z.string(),
   })),

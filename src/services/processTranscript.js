@@ -4,6 +4,7 @@ export async function processTranscript(newSegments, previousState = emptyMeetin
   const input = requestSchema.safeParse({
     newSegments,
     previousState,
+    ...Object.fromEntries(['materials', 'outputLanguage', 'deletedNodes', 'deletedTaskIds', 'lockedTaskIds'].filter(key => options[key] !== undefined).map(key => [key, options[key]])),
     ...(options.lockedIds?.length ? { lockedIds: options.lockedIds } : {}),
     ...(options.historicalContext ? { historicalContext: options.historicalContext } : {}),
     ...(options.reassessment ? { reassessment: true } : {}),
@@ -13,7 +14,7 @@ export async function processTranscript(newSegments, previousState = emptyMeetin
     return input.data.previousState;
   }
 
-  const timeout = AbortSignal.timeout(55_000);
+  const timeout = AbortSignal.timeout(180_000);
   let response;
   try {
     response = await fetch('/api/process', {

@@ -1,3 +1,4 @@
+import { rebuildEdges } from './mapEdits.js';
 const segment = (time, speaker, text) => ({ time, speaker, text });
 
 export const demoBatches = [
@@ -37,7 +38,7 @@ export const demoStates = [
   },
 ];
 
-export function getDemoState(segments, previousState) {
+function getBaseDemoState(segments, previousState) {
   // Cumulative matching also works if the user queues multiple batches before a request.
   const latest = demoBatches.findLastIndex(batch => batch.some(example =>
     segments.some(segment => example.time === segment.time && example.text === segment.text),
@@ -93,4 +94,25 @@ function quoteMockInput(segments, previousState) {
     edgeIds.add(root.id + '-' + id);
   }
   return state;
+}
+
+// Mock mode quotes document evidence without claiming that background facts are decisions.
+export function getDemoState(segments, previousState, context = {}) {
+  const state = getBaseDemoState(segments, previousState);
+  const deleted = new Set((context.deletedNodes || []).map(node => node.id));
+  const labels = new Set((context.deletedNodes || []).map(node => node.label.trim().toLowerCase()));
+  const selected = new Set((context.materials || []).map(doc => 'material-' + doc.id));
+  const generatedMaterialIds = new Set(state.nodes.filter(node => node.id.startsWith('material-') && !selected.has(node.id)).map(node => node.id));
+  let nodes = state.nodes.filter(node => !deleted.has(node.id) && !generatedMaterialIds.has(node.id)
+    && (node.id.startsWith('user-') || !labels.has(node.label.trim().toLowerCase())));
+  for (const doc of context.materials || []) {
+    const id = 'material-' + doc.id;
+    if (!deleted.has(id) && !nodes.some(node => node.id === id) && !labels.has(doc.name.trim().toLowerCase())) {
+      nodes.push({ id, parentId: null, label: doc.name, importance: 5,
+        summary: 'Background material: ' + doc.pages.map(page => 'Page/slide ' + page.page + ': ' + page.text).join(' ').slice(0, 3000) });
+    }
+  }
+  let count;
+  do { count = nodes.length; const ids = new Set(nodes.map(node => node.id)); nodes = nodes.filter(node => node.parentId === null || ids.has(node.parentId)); } while (nodes.length !== count);
+  return { nodes, edges: rebuildEdges(nodes), actionItems: nodes.length ? state.actionItems.filter(task => !(context.deletedTaskIds || []).includes(task.id)) : [] };
 }

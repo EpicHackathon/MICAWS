@@ -3,7 +3,7 @@ import { formatTime } from '../shared/formatTime.js';
 
 // Live transcript in the side panel. Scrolls on its own and follows the newest line,
 // unless you've scrolled up to reread something (then it leaves you where you are).
-export default function TranscriptPanel({ segments = [], isRecording = false }) {
+export default function TranscriptPanel({ segments = [], isRecording = false, onSeek, translations = [], translationLanguage }) {
   const scroller = useRef(null);
   const stickToBottom = useRef(true);
 
@@ -34,9 +34,11 @@ export default function TranscriptPanel({ segments = [], isRecording = false }) 
         ) : (
           segments.map((segment, index) => (
             <p key={index} className="transcript-line">
-              <span className="transcript-time">{formatTime(segment.time)}</span>{' '}
+              {onSeek ? <button type="button" className="transcript-time" aria-label={`Play recording at ${formatTime(segment.time)}`} onClick={() => onSeek(segment.time)}>{formatTime(segment.time)}</button>
+                : <span className="transcript-time">{formatTime(segment.time)}</span>}{' '}
               {segment.speaker && <strong className="transcript-speaker">{segment.speaker}: </strong>}
               {segment.text}
+              {translations[index] && <span className="transcript-translation" lang={translationLanguage} style={{ display: 'block' }}>Translation: {translations[index]}</span>}
             </p>
           ))
         )}

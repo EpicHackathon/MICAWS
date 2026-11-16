@@ -4,13 +4,14 @@ from pathlib import Path
 from threading import Lock
 
 import whisperx
+from whisperx.utils import LANGUAGES
 
 
 class Transcriber:
-    def __init__(self, model_name: str = "base", language: str = "en"):
+    def __init__(self, model_name: str = "base", language: str = "auto"):
         if shutil.which("ffmpeg") is None:
             raise RuntimeError(
-                "FFmpeg is required. On macOS, install it with: brew install ffmpeg"
+                "FFmpeg is required. Windows: winget install --id Gyan.FFmpeg --exact; macOS: brew install ffmpeg"
             )
 
         self.language = language
@@ -19,7 +20,7 @@ class Transcriber:
             model_name,
             device="cpu",
             compute_type="int8",
-            language=language,
+            language=None,
             vad_method="silero",
         )
 
@@ -28,6 +29,7 @@ class Transcriber:
         audio_path: str | Path,
         chunk_id: str,
         start_seconds: float = 0.0,
+        language: str | None = None,
     ) -> list[dict]:
         path = Path(audio_path).expanduser()
 
@@ -42,16 +44,24 @@ class Transcriber:
         if not math.isfinite(start_seconds) or start_seconds < 0:
             raise ValueError("start_seconds must be a finite, nonnegative number.")
 
+        language = language or self.language
+        if language != "auto" and language not in LANGUAGES:
+            raise ValueError("Unsupported source language. Use auto or a supported Whisper language code.")
+
         audio = whisperx.load_audio(str(path))
 
         if audio.size == 0:
             return []
 
         with self._lock:
+            # A previous failed decode may have left a tokenizer behind.
+            if language == "auto":
+                self._model.tokenizer = None
             result = self._model.transcribe(
                 audio,
                 batch_size=1,
-                language=self.language,
+                language=None if language == "auto" else language,
+                task="transcribe",
             )
 
         segments = []

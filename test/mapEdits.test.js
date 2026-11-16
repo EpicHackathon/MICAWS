@@ -21,8 +21,8 @@ test('moving a branch moves everything under it', () => {
   assert.equal(next.nodes.find(n => n.id === 'openai-gpt').parentId, 'stack-openai');
 });
 
-test('refuses: moving the main idea, into its own branch, or past five levels', () => {
-  assert.throws(() => moveNode(sample(), 'project', 'stack'), /main idea/);
+test('refuses moving any node into its own branch or past five levels', () => {
+  assert.throws(() => moveNode(sample(), 'project', 'stack'), /own branch/);
   assert.throws(() => moveNode(sample(), 'stack', 'stack-openai'), /own branch/);
   // rikki-shapes is level 4 (other branch); stack is 3 levels tall (stack > openai > gpt) -> 7
   assert.throws(() => moveNode(sample(), 'stack', 'rikki-shapes'), /deeper than 5/);
@@ -37,21 +37,23 @@ test('edit title and summary, refusing empty text', () => {
   assert.throws(() => editNode(sample(), 'quiz', { label: '   ' }), /title/);
 });
 
-test('delete removes the whole branch and its edges, but never the main idea', () => {
+test('delete removes the whole branch and permits deleting a complete tree', () => {
   const before = sample();
   const gone = subtreeIds(before, 'stack');
   const next = deleteNode(before, 'stack');
   assert.ok(next.nodes.every(n => !gone.has(n.id)));
   assert.ok(next.edges.every(e => !gone.has(e.source) && !gone.has(e.target)));
   valid(next);
-  assert.throws(() => deleteNode(sample(), 'project'), /main idea/);
+  assert.deepEqual(deleteNode(sample(), 'project'), { nodes: [], edges: [], actionItems: [] });
 });
 
-test('move out: a detail becomes a main point; a main point cannot go higher', () => {
+test('move out: a detail becomes a main point; a main point becomes a new tree', () => {
   const next = moveOut(sample(), 'stack-react');          // detail under Tech Stack
   assert.equal(next.nodes.find(n => n.id === 'stack-react').parentId, 'project');
   valid(next);
-  assert.throws(() => moveOut(sample(), 'stack'), /already a main point/);
+  const forest = moveOut(sample(), 'stack');
+  assert.equal(forest.nodes.find(n => n.id === 'stack').parentId, null);
+  valid(forest);
 });
 
 test('add a topic with just a title (summary defaults to the title)', () => {
