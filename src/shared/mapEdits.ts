@@ -11,8 +11,7 @@ const byId = (state: MeetingState) => new Map(state.nodes.map(node => [node.id, 
 // Edges always mirror parentId exactly: one edge per non-root node, id "<parent>-<child>".
 export function rebuildEdges(nodes: MeetingNode[]) {
   return nodes
-    .filter(node => node.parentId !== null)
-    .map(node => ({ id: `${node.parentId}-${node.id}`, source: node.parentId, target: node.id }));
+    .flatMap(node => node.parentId === null ? [] : [{ id: `${node.parentId}-${node.id}`, source: node.parentId, target: node.id }]);
 }
 
 // The node itself plus everything below it.

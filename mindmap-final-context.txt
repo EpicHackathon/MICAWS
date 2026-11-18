@@ -1,0 +1,379 @@
+========== MindMap.tsx lines 65,185 ==========
+    65	  mapStyle: MapStyle,
+    66	  root: MeetingNode,
+    67	  kidsOf: (id: string) => MeetingNode[],
+    68	  size: Map<string, Size>,
+    69	  compact = false
+    70	): Map<string, Position> {
+    71	  const pos = new Map<string, Position>();
+    72	
+    73	  if (mapStyle === 'tree' && compact) {
+    74	    // OUTLINE TREE (Show all): narrow and tall instead of wide.
+    75	    // Main idea on top, its children in one row, and everything under each child
+    76	    // stacked DOWNWARD in that child's column, indented one step per level.
+    77	    const OUTLINE_INDENT = 28, OUTLINE_GAP = 14, COLUMN_GAP = 40;
+    78	    const points = kidsOf(root.id);
+    79	    const columnWidth = (id: string) => {
+    80	      let widest = size.get(id).width;
+    81	      (function walk(nodeId: string, d: number) {
+    82	        kidsOf(nodeId).forEach(k => { widest = Math.max(widest, d * OUTLINE_INDENT + size.get(k.id).width); walk(k.id, d + 1); });
+    83	      })(id, 1);
+    84	      return widest;
+    85	    };
+    86	    const rowTop = size.get(root.id).height + LEVEL_GAP;
+    87	    let left = 0;
+    88	    points.forEach(point => {
+    89	      pos.set(point.id, { x: left, y: rowTop });
+    90	      let y = rowTop + size.get(point.id).height + OUTLINE_GAP;
+    91	      (function stackDown(parentId: string, d: number) {
+    92	        kidsOf(parentId).forEach(kid => {
+    93	          pos.set(kid.id, { x: left + d * OUTLINE_INDENT, y });
+    94	          y += size.get(kid.id).height + OUTLINE_GAP;
+    95	          stackDown(kid.id, d + 1);
+    96	        });
+    97	      })(point.id, 1);
+    98	      left += columnWidth(point.id) + COLUMN_GAP;
+    99	    });
+   100	    const rowWidth = Math.max(0, left - COLUMN_GAP);
+   101	    pos.set(root.id, { x: rowWidth / 2 - size.get(root.id).width / 2, y: 0 });
+   102	    return pos;
+   103	  }
+   104	
+   105	  const depthOf = new Map<string, number>();
+   106	  const byDepth: MeetingNode[][] = [];   // byDepth[d] = boxes on level d
+   107	  (function walk(node: MeetingNode, d: number) {
+   108	    depthOf.set(node.id, d);
+   109	    (byDepth[d] ??= []).push(node);
+   110	    kidsOf(node.id).forEach(kid => walk(kid, d + 1));
+   111	  })(root, 0);
+   112	  // how many "leaves" (boxes with no children) sit under each box: bigger families get more room
+   113	  const leaves = (id: string): number => { const kids = kidsOf(id); return kids.length ? kids.reduce((s, k) => s + leaves(k.id), 0) : 1; };
+   114	
+   115	  if (mapStyle === 'tree') {
+   116	    // Leaves get columns left-to-right; a parent sits centered over its children (Micah's idea).
+   117	    // Each level starts just below the tallest box of the level above.
+   118	    const levelTop = [0];
+   119	    byDepth.forEach((row, d) => {
+   120	      levelTop[d + 1] = levelTop[d] + Math.max(...row.map(n => size.get(n.id).height)) + LEVEL_GAP;
+   121	    });
+   122	    let nextColumn = 0;
+   123	    (function place(node: MeetingNode): number {
+   124	      const cols = kidsOf(node.id).map(place);
+   125	      const column = cols.length ? (cols[0] + cols[cols.length - 1]) / 2 : nextColumn++;
+   126	      pos.set(node.id, { x: column * TREE_COLUMN - size.get(node.id).width / 2, y: levelTop[depthOf.get(node.id)] });
+   127	      return column;
+   128	    })(root);
+   129	    return pos;
+   130	  }
+   131	
+   132	  if (mapStyle === 'linear') {
+   133	    // Levels go left-to-right. Leaves are STACKED top-to-bottom by their real heights;
+   134	    // a parent sits halfway down its own children's stack.
+   135	    const levelLeft = [0];
+   136	    byDepth.forEach((col, d) => {
+   137	      levelLeft[d + 1] = levelLeft[d] + Math.max(...col.map(n => size.get(n.id).width)) + LINEAR_GAP_X;
+   138	    });
+   139	    const centerY = new Map<string, number>();
+   140	    const shift = (id: string, dy: number) => { centerY.set(id, centerY.get(id) + dy); kidsOf(id).forEach(k => shift(k.id, dy)); };
+   141	    let cursor = 0;
+   142	    (function stack(node: MeetingNode) {
+   143	      const h = size.get(node.id).height;
+   144	      const kids = kidsOf(node.id);
+   145	      if (!kids.length) {                       // leaf: next spot in the stack
+   146	        centerY.set(node.id, cursor + h / 2);
+   147	        cursor += h + STACK_GAP;
+   148	        return;
+   149	      }
+   150	      const start = cursor;
+   151	      kids.forEach(stack);
+   152	      const span = cursor - STACK_GAP - start;  // height of this box's children stack
+   153	      if (h > span) {                           // parent taller than its kids: make room
+   154	        kids.forEach(k => shift(k.id, (h - span) / 2));
+   155	        cursor += h - span;
+   156	      }
+   157	      centerY.set(node.id, (centerY.get(kids[0].id) + centerY.get(kids[kids.length - 1].id)) / 2);
+   158	    })(root);
+   159	    for (const [id, cy] of centerY) {
+   160	      pos.set(id, { x: levelLeft[depthOf.get(id)], y: cy - size.get(id).height / 2 });
+   161	    }
+   162	    return pos;
+   163	  }
+   164	
+   165	  // BUBBLE: the top box sits in the middle. Each level is an oval ring around it.
+   166	  // Every box gets a "slice" of the circle (bigger families get bigger slices);
+   167	  // its children spread out inside that slice on the next ring out.
+   168	  const radius = [0];
+   169	  for (let d = 1; d < byDepth.length; d++) {
+   170	    // ring must be big enough to fit everyone on it, and well outside the previous ring
+   171	    radius[d] = Math.max(radius[d - 1] + (d === 1 ? 190 : 170), (byDepth[d].length * 205) / (2 * Math.PI));
+   172	  }
+   173	  const OVAL = 1.45;   // stretch sideways: boxes are wider than they are tall
+   174	  (function spread(node: MeetingNode, from: number, to: number) {
+   175	    const d = depthOf.get(node.id);
+   176	    const angle = (from + to) / 2;
+   177	    const cx = d ? Math.cos(angle) * radius[d] * OVAL : 0;
+   178	    const cy = d ? Math.sin(angle) * radius[d] : 0;
+   179	    const { width, height } = size.get(node.id);
+   180	    pos.set(node.id, { x: cx - width / 2, y: cy - height / 2 });
+   181	    const kids = kidsOf(node.id);
+   182	    const total = kids.reduce((s, k) => s + leaves(k.id), 0);
+   183	    let a = from;
+   184	    kids.forEach(kid => {
+   185	      const slice = ((to - from) * leaves(kid.id)) / total;
+========== MindMap.tsx lines 275,310 ==========
+   275	    // The sample meeting is not live talk: never any dots.
+   276	    if (!live || !before) { setUnread(new Set<string>()); return; }
+   277	
+   278	    // Switched to a completely different meeting (e.g. back from the sample)? No dots.
+   279	    // (An empty "before" means the live meeting just started: everything counts as new.)
+   280	    const sameMeeting = before.size === 0 || [...now.keys()].some(id => before.has(id));
+   281	    if (!sameMeeting) { setUnread(new Set<string>()); return; }
+   282	
+   283	    // Live update: find what changed, then point the dot at its MAIN POINT.
+   284	    const mainIds = new Set(allNodes.filter(node => node.parentId === null).map(node => node.id));
+   285	    const byId = new Map(allNodes.map(node => [node.id, node]));
+   286	    const pointsToDot = new Set<string>();
+   287	    for (const node of allNodes) {
+   288	      if (before.get(node.id) === now.get(node.id)) continue;      // unchanged
+   289	      // walk up until we reach the main point this topic belongs to
+   290	      let current = node;
+   291	      while (current && current.parentId !== null && !mainIds.has(current.parentId)) current = byId.get(current.parentId);
+   292	      if (current && mainIds.has(current.parentId)) pointsToDot.add(current.id);
+   293	    }
+   294	    pointsToDot.delete(focusRef.current);   // you're already looking at that one
+   295	    if (pointsToDot.size) setUnread(current => new Set([...current, ...pointsToDot]));
+   296	  }, [allNodes, live]);
+   297	
+   298	  function markRead(ids: Iterable<string>) {
+   299	    setUnread(current => {
+   300	      const next = new Set(current);
+   301	      for (const id of ids) next.delete(id);
+   302	      return next;
+   303	    });
+   304	  }
+   305	
+   306	  const roots = allNodes.filter(node => node.parentId === null);
+   307	  const rootIds = new Set(roots.map(node => node.id));
+   308	
+   309	  // Who sits at the TOP of the tree right now?
+   310	  // Big picture / show all: the main idea. Zoomed in: the main point you clicked.
+========== MindMap.tsx lines 345,395 ==========
+   345	  const compact = mapStyle === 'tree' && fullView;
+   346	  const positions = arrangeForest(visibleRoots.map(root => layout(mapStyle, root, kidsOf, size, compact)), size);
+   347	
+   348	  const sides = LINE_SIDES[mapStyle];
+   349	  // Which sides the lines attach to. Outline tree: main idea -> points from the top,
+   350	  // then everything below hangs off the LEFT side like an indented list.
+   351	  const sidesFor = (node: MeetingNode) => {
+   352	    if (!compact) return sides;
+   353	    if (node.parentId === null) return { source: 'bottom', target: 'top' };
+   354	    if (rootIds.has(node.parentId)) return { source: 'left', target: 'top' };
+   355	    return { source: 'left', target: 'left' };
+   356	  };
+   357	
+   358	  // While dragging in edit mode: which box is under the middle of the dragged box?
+   359	  function findDropTarget(dragId: string, x: number, y: number) {
+   360	    const { width, height } = size.get(dragId) ?? { width: 0, height: 0 };
+   361	    const cx = x + width / 2, cy = y + height / 2;
+   362	    const ownBranch = new Set([dragId]);
+   363	    let grew = true;
+   364	    while (grew) {
+   365	      grew = false;
+   366	      for (const n of allNodes) if (n.parentId && ownBranch.has(n.parentId) && !ownBranch.has(n.id)) { ownBranch.add(n.id); grew = true; }
+   367	    }
+   368	    for (const n of nodes) {
+   369	      if (ownBranch.has(n.id)) continue;
+   370	      const p = positions.get(n.id), s = size.get(n.id);
+   371	      if (!s) continue;
+   372	      if (p && cx >= p.x && cx <= p.x + s.width && cy >= p.y && cy <= p.y + s.height) return n.id;
+   373	    }
+   374	    return null;
+   375	  }
+   376	
+   377	  function handleNodesChange(changes: NodeChange<Node>[]) {
+   378	    // React Flow measures every box and reports the size here. We MUST keep those sizes and
+   379	    // hand them back on each render, or React Flow treats boxes as size-less and hides them.
+   380	    const sizes = changes.filter((change): change is Extract<NodeChange<Node>, { type: 'dimensions' }> & { dimensions: { width: number; height: number } } => change.type === 'dimensions' && !!change.dimensions);
+   381	    if (sizes.length) {
+   382	      setMeasured(current => {
+   383	        let next = current;
+   384	        for (const { id, dimensions } of sizes) {
+   385	          const old = current[id];
+   386	          if (!old || old.width !== dimensions.width || old.height !== dimensions.height) {
+   387	            if (next === current) next = { ...current };
+   388	            next[id] = { width: dimensions.width, height: dimensions.height };
+   389	          }
+   390	        }
+   391	        return next;
+   392	      });
+   393	    }
+   394	    if (!editMode) return;
+   395	    for (const change of changes) {
+========== MindMap.tsx lines 415,465 ==========
+   415	    dragStart.current = positions.get(node.id) ?? null;
+   416	  }
+   417	
+   418	  function handleNodeDragStop(event: MouseEvent | TouchEvent, node: Node) {
+   419	    const start = dragStart.current;
+   420	    const end = dragPos?.id === node.id ? dragPos : null;
+   421	    const movedFar = start && end && Math.hypot(end.x - start.x, end.y - start.y) > 80;
+   422	    if (dropTargetId) {
+   423	      moveInto(node.id, dropTargetId);            // dropped ON a box: goes inside it
+   424	    } else if (movedFar) {
+   425	      // dropped on EMPTY space: moves OUT one level (becomes a sibling of its parent)
+   426	      const moved = allNodes.find(n => n.id === node.id);
+   427	      const oldParent = allNodes.find(n => n.id === moved?.parentId);
+   428	      const newParent = allNodes.find(n => n.id === oldParent?.parentId);
+   429	      if (moved && oldParent && newParent && tryEdit(state => moveOut(state, node.id))) {
+   430	        setEditNotice(`Moved “${moved.label}” out of “${oldParent.label}”.`);
+   431	        if (focusId === oldParent.id) setFocusId(newParent.parentId === null ? null : newParent.id);
+   432	      }
+   433	    }
+   434	    dragStart.current = null;
+   435	    setDragPos(null);
+   436	    setDropTargetId(null);
+   437	  }
+   438	
+   439	  // Connect the dots: drag from box A's dot to box B's dot -> B goes inside A.
+   440	  function handleConnect({ source, target }: Connection) {
+   441	    if (source && target) moveInto(target, source);
+   442	  }
+   443	
+   444	  function openEditor(node: MeetingNode) {
+   445	    setEditingId(node.id);
+   446	    setDraft({ label: node.label, summary: node.summary });
+   447	    setConfirmDelete(false);
+   448	    setEditMessage(null);
+   449	    setNewTitle('');
+   450	  }
+   451	
+   452	  // Add a new topic inside the box that's open in the edit panel (title only).
+   453	  function addInside(parent: MeetingNode) {
+   454	    if (tryEdit(state => addNode(state, parent.id, { label: newTitle }))) {
+   455	      const hidden = !fullView && parent.id !== top;
+   456	      setEditNotice(`Added “${newTitle.trim()}” inside “${parent.label}”.` + (hidden ? ` Open “${parent.label}” to see it.` : ''));
+   457	      setNewTitle('');
+   458	    }
+   459	  }
+   460	  const editingNode = editMode ? allNodes.find(node => node.id === editingId) : null;
+   461	  const editingBranchSize = editingNode ? subtreeIds({ nodes: allNodes, edges: allEdges, actionItems: [] }, editingNode.id).size - 1 : 0;
+   462	
+   463	  const flowNodes = nodes.map(node => {
+   464	    const level = getLevel(node, rootIds);
+   465	    const isFocus = node.id === focusId;   // the main point you zoomed into
+========== MindMap.tsx lines 490,555 ==========
+   490	      measured: measured[node.id],   // size React Flow measured (see handleNodesChange)
+   491	      data: { label },
+   492	      className: `shape-${level}${isFocus ? ' is-focus' : ''}${hasUnread ? ' has-unread' : ''}${clickable && level === 'detail' ? ' has-kids' : ''}`
+   493	        + `${node.id === dropTargetId ? ' drop-target' : ''}${editMode && node.id === editingId ? ' edit-selected' : ''}`,   // <- picks the shape
+   494	      selected: node.id === selectedNodeId,                         // Micah: highlight the box shown in the details panel
+   495	      draggable: editMode,                      // the main idea stays put
+   496	      ariaLabel: node.label + (hasUnread ? ', has new updates' : '') + ', importance ' + node.importance + ' out of 5.'
+   497	        + (editMode ? ' Edit mode: select to rename or delete.' : ' Select to open.'),
+   498	      sourcePosition: lineSides.source as FlowPosition,
+   499	      targetPosition: lineSides.target as FlowPosition,
+   500	    };
+   501	  });
+   502	
+   503	  // Click a box that has children -> zoom in on it (main points AND deeper details).
+   504	  // Keep clicking to keep going deeper. Works from the Show all view too.
+   505	  function handleNodeClick(event: MouseEvent | TouchEvent, node: Node) {
+   506	    const clicked = allNodes.find(n => n.id === node.id);
+   507	    if (!clicked) return;
+   508	    if (editMode) { openEditor(clicked); return; }   // edit mode: click = open the edit panel
+   509	    // Micah's details panel still opens from the topic list view.
+   510	    // Main points ALWAYS open (even with no details yet: you still see their summary card).
+   511	    // Deeper boxes open when they have their own sub-details.
+   512	    const isMainPoint = clicked.parentId !== null && rootIds.has(clicked.parentId);
+   513	    if (clicked.parentId !== null && clicked.id !== focusId && (isMainPoint || hasKids(clicked.id))) {
+   514	      setFocusId(clicked.id);
+   515	      setShowAll(false);
+   516	    }
+   517	    markRead([clicked.id]);   // you looked at it, so its dot goes away
+   518	  }
+   519	
+   520	  // Go up ONE level: from a sub-detail back to its detail, from a main point back to the big picture.
+   521	  function goUp() {
+   522	    if (!focusId) return;
+   523	    markRead([focusId]);
+   524	    const parentId = allNodes.find(node => node.id === focusId)?.parentId;
+   525	    setFocusId(parentId && !rootIds.has(parentId) ? parentId : null);
+   526	  }
+   527	
+   528	  // Click empty space -> up one level (does nothing in the big picture / Show all).
+   529	  // In edit mode it just closes the edit panel.
+   530	  function handlePaneClick() {
+   531	    if (editMode) { setEditingId(null); return; }
+   532	    goUp();
+   533	  }
+   534	
+   535	  function toggleEditMode() {
+   536	    setEditMode(current => !current);
+   537	    setEditingId(null);
+   538	    setEditMessage(null);
+   539	    setDragPos(null);
+   540	    setDropTargetId(null);
+   541	  }
+   542	
+   543	  // Path from the main idea down to where you are, e.g. "Hackathon Plan › Tech Stack › OpenAI"
+   544	  const path: MeetingNode[] = [];
+   545	  for (let id = focusId; id; id = allNodes.find(node => node.id === id)?.parentId) {
+   546	    const node = allNodes.find(n => n.id === id);
+   547	    if (!node) break;
+   548	    path.unshift(node.label);
+   549	  }
+   550	
+   551	  // Show all on/off. Turning it on from a zoomed-in point goes back out first.
+   552	  function toggleShowAll() {
+   553	    if (focusId) markRead([focusId]);
+   554	    setFocusId(null);
+   555	    setShowAll(current => !current);
+========== MindMap.tsx lines 565,590 ==========
+   565	        nodes={flowNodes}
+   566	        edges={edges}
+   567	        nodesDraggable={editMode}
+   568	        nodesConnectable={editMode}
+   569	        edgesReconnectable={false}
+   570	        deleteKeyCode={null}
+   571	        fitView
+   572	        fitViewOptions={{ maxZoom: 1 }}
+   573	        minZoom={0.1}
+   574	        defaultEdgeOptions={{ type: sides.edgeType }}
+   575	        onNodesChange={handleNodesChange}
+   576	        onNodeDragStart={handleNodeDragStart}
+   577	        onNodeDragStop={handleNodeDragStop}
+   578	        onConnect={handleConnect}
+   579	        onNodeClick={handleNodeClick}
+   580	        onPaneClick={handlePaneClick}
+   581	      >
+   582	        <AutoFit shape={mapStyle + '|' + (fullView ? 'all' : top) + '|' + allNodes.map(n => n.id + ':' + n.parentId).join(',')
+   583	          + '|' + nodes.map(n => Math.round(measured[n.id]?.height ?? 0)).join(',')} />
+   584	        {editMode && (
+   585	          <Panel position="bottom-center">
+   586	            <div className="edit-hint" role="status">
+   587	              {editMessage
+   588	                ? <span className="edit-error">{editMessage}</span>
+   589	                : editNotice
+   590	                  ? editNotice
+========== MindMap.tsx lines 700,720 ==========
+   700	              className="show-all-toggle"
+   701	              aria-pressed={fullView}
+   702	              onClick={toggleShowAll}
+   703	            >
+   704	              {fullView ? 'Big picture' : 'Show all'}
+   705	            </button>
+   706	            <div className="style-switch" role="group" aria-label="Map style">
+   707	              {['tree', 'linear', 'bubble'].map(name => (
+   708	                <button
+   709	                  key={name}
+   710	                  type="button"
+   711	                  aria-pressed={mapStyle === name}
+   712	                  onClick={() => setMapStyle(name)}
+   713	                >
+   714	                  {name[0].toUpperCase() + name.slice(1)}
+   715	                </button>
+   716	              ))}
+   717	            </div>
+   718	          </div>
+   719	        </Panel>
+   720	        <Background />
