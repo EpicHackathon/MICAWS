@@ -7,7 +7,7 @@ from tempfile import TemporaryDirectory
 from typing import Annotated
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
-from backend.whisperx.transcription import Transcriber
+from transcription.whisperx.transcription import Transcriber
 from whisperx.utils import LANGUAGES
 
 logger = logging.getLogger("uvicorn.error")

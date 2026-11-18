@@ -40,7 +40,7 @@ RUN python -m pip install --no-cache-dir --no-deps \
     speechbrain==1.0.3
 
 # Copy MICAWS diarization code
-COPY backend/diart/ /app/diart_service/
+COPY transcription/diart/ /app/diart_service/
 
 # Verify imports during the build
 RUN python -c "import torch, torchaudio, diart; print('diart import successful')"

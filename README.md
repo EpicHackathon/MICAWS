@@ -22,6 +22,8 @@ MICAWS/
     process.ts        POST /api/process — mind-map updates (Gemini/Ollama), validation
     summary.ts        POST /api/summary — end-of-meeting summary generation
     ollama.ts         Ollama provider helper
+  server/             Node API and worker for saved meetings
+  transcription/      Python speech transcription and optional Diart tooling
   src/
     App.tsx           Main app: recording controls, segments, processor + summary wiring
     main.tsx          React entry point

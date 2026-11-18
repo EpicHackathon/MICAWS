@@ -31,7 +31,7 @@ services:
       context: .
       dockerfile: Dockerfile.diart
     volumes:
-      - ./backend/diart:/app/diart_service
+      - ./transcription/diart:/app/diart_service
       - ./audio:/app/audio
       - huggingface-cache:/root/.cache/huggingface
     environment:

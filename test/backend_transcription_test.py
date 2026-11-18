@@ -11,7 +11,7 @@ fake_whisper = types.ModuleType("whisperx")
 fake_utils = types.ModuleType("whisperx.utils")
 fake_utils.LANGUAGES = {"en": "english", "es": "spanish"}
 with patch.dict(sys.modules, {"whisperx": fake_whisper, "whisperx.utils": fake_utils}):
-    spec = importlib.util.spec_from_file_location("transcription_under_test", Path(__file__).parents[1] / "backend/whisperx/transcription.py")
+    spec = importlib.util.spec_from_file_location("transcription_under_test", Path(__file__).parents[1] / "transcription/whisperx/transcription.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 
