@@ -1,0 +1,509 @@
+/* =========================================================
+   MIND MAP STYLES
+   - Shapes + behavior (squared-off main idea, rounded main points,
+     A2 detail pills, red unread dot) are the SAME in every theme.
+   - Colors, one block per theme:
+       NEUTRAL (default) = "Quiet neutral" palette
+       WARM              = "Cottage warmth" palette
+       COOL              = Marena's cool theme variables (for now)
+   - Accent roles (same idea in every theme):
+       --accent  = highlights: hover, drop target, focus   (Steel / Honey)
+       --unread  = alerts: unread dot, Delete              (Mauve / Dusty rose)
+       --success = done: Save button                       (Lichen / Sage)
+   ========================================================= */
+
+/* ---- Colors: NEUTRAL (default) = "Quiet neutral" palette ---- */
+.mindmap {
+  --unread: #B0908B;          /* Mauve: unread dot, Delete */
+  --alert-text: #8A6461;      /* Mauve, darkened so text is readable */
+  --accent: #8FA3B0;          /* Steel: highlights */
+  --success: #8DA899;         /* Lichen: Save */
+  --map-bg: #FFFFFF;          /* white, like Cool: boxes stand out */
+  --map-dots: #E5E5EA;        /* Ash */
+  --map-line: #D1D1D6;        /* Pebble */
+  --main-fill: #6E7B8B;       /* Slate */
+  --main-border: #6E7B8B;     /* Slate */
+  --main-text: #FFFFFF;       /* white on Slate */
+  --point-fill: #FFFFFF;      /* white */
+  --point-hover-fill: #F2F2F7;/* Fog */
+  --point-border: #8E8E93;    /* Stone */
+  --hover-border: #6E7B8B;    /* Slate */
+  --detail-fill: #F2F2F7;     /* Fog */
+  --detail-border: #D1D1D6;   /* Pebble */
+  --title: #1C1C1E;           /* Ink */
+  --text: #3A3A3C;            /* Charcoal */
+  --summary: #636366;         /* Graphite */
+  --switch-bg: #E5E5EA;       /* Ash */
+  --switch-active: #FFFFFF;   /* white */
+  --switch-text: #636366;     /* Graphite */
+  --switch-text-active: #1C1C1E;
+}
+
+/* ---- Colors: WARM = "Cottage warmth" sepia palette ---- */
+[data-theme="warm"] .mindmap {
+  --unread: #C9908E;          /* Dusty rose: unread dot, Delete */
+  --alert-text: #9E5F5C;      /* Dusty rose, darkened so text is readable */
+  --accent: #C8A96E;          /* Honey: highlights */
+  --success: #B7C4A1;         /* Sage: Save */
+  --map-bg: #FFF8F0;          /* Linen */
+  --map-dots: #E6D5C3;        /* Biscuit */
+  --map-line: #A89279;        /* Sandstone */
+  --main-fill: #D4A373;       /* Clay */
+  --main-border: #4A3728;     /* Espresso */
+  --main-text: #4A3728;       /* Espresso on Clay */
+  --point-fill: #F5EBE0;      /* Parchment */
+  --point-hover-fill: #E6D5C3;/* Biscuit */
+  --point-border: #8B7355;    /* Driftwood */
+  --hover-border: #C8A96E;    /* Honey */
+  --detail-fill: #EDE0D4;     /* Oat */
+  --detail-border: #A89279;   /* Sandstone */
+  --title: #4A3728;           /* Espresso */
+  --text: #4A3728;            /* Espresso */
+  --summary: #6B5744;         /* Walnut */
+  --switch-bg: #EDE0D4;       /* Oat */
+  --switch-active: #FFF8F0;   /* Linen */
+  --switch-text: #6B5744;     /* Walnut */
+  --switch-text-active: #4A3728;
+}
+
+/* ---- Colors: DARK = "Midnight navy" palette ---- */
+[data-theme="dark"] .mindmap {
+  --unread: #E06C60;          /* Ember: unread dot, Delete */
+  --alert-text: #E06C60;      /* Ember (readable on dark) */
+  --accent: #58A6FF;          /* Electric: highlights */
+  --success: #3FB88C;         /* Mint: Save */
+  --on-success: #0D1117;      /* dark text on Mint */
+  --map-bg: #161B22;          /* Midnight */
+  --map-dots: #1E2A3A;        /* Navy */
+  --map-line: #5C6E82;        /* Dusk */
+  --main-fill: #3D5A80;       /* Steel blue */
+  --main-border: #58A6FF;     /* Electric glow */
+  --main-text: #E8ECF0;       /* Cloud */
+  --point-fill: #283848;      /* Deep sea */
+  --point-hover-fill: #30435A;/* Deep sea, lighter */
+  --point-border: #3D5A80;    /* Steel blue */
+  --hover-border: #58A6FF;    /* Electric */
+  --detail-fill: #1E2A3A;     /* Navy */
+  --detail-border: #283848;   /* Deep sea */
+  --title: #E8ECF0;           /* Cloud */
+  --text: #C8D2DC;            /* Silver */
+  --summary: #7A8A9E;         /* Pewter */
+  --switch-bg: #1E2A3A;       /* Navy */
+  --switch-active: #283848;   /* Deep sea */
+  --switch-text: #7A8A9E;     /* Pewter */
+  --switch-text-active: #E8ECF0;
+  /* React Flow's own zoom buttons + label (white by default) */
+  --xy-controls-button-background-color: #1E2A3A;
+  --xy-controls-button-background-color-hover: #283848;
+  --xy-controls-button-color: #C8D2DC;
+  --xy-controls-button-color-hover: #E8ECF0;
+  --xy-controls-button-border-color: #283848;
+  --xy-attribution-background-color: rgba(22, 27, 34, 0.6);
+}
+
+/* ---- Colors: COOL (from Marena's cool theme variables, for now) ---- */
+[data-theme="cool"] .mindmap {
+  --unread: #B4533C;
+  --alert-text: #B4533C;
+  --accent: var(--color-accent, #8fa3ad);
+  --success: var(--color-success, #6b8a92);
+  --main-text: var(--node-title, #5b7a8c);
+  --map-bg: var(--color-bg-card, #ffffff);
+  --map-dots: var(--color-border, #dde3e7);
+  --map-line: var(--node-detail-border, #b8c4ce);
+  --main-fill: var(--color-bg-card, #ffffff);
+  --main-border: var(--node-main-border, #5b7a8c);
+  --point-fill: var(--color-bg-card, #ffffff);
+  --point-hover-fill: var(--node-detail-bg, #e9edf0);
+  --point-border: var(--node-point-border, #7a9eb3);
+  --hover-border: var(--color-accent, #8fa3ad);
+  --detail-fill: var(--node-detail-bg, #e9edf0);
+  --detail-border: var(--node-detail-border, #b8c4ce);
+  --title: var(--node-title, #5b7a8c);
+  --text: var(--node-text, #5b7a8c);
+  --summary: var(--node-summary, #8a97a0);
+  --switch-bg: var(--color-bg-muted, #e9edf0);
+  --switch-active: var(--color-bg-card, #ffffff);
+  --switch-text: var(--color-text-muted, #8a97a0);
+  --switch-text-active: var(--color-text, #5b7a8c);
+}
+
+/* ---- Map container (Marena's frame + shadow) ---- */
+.mindmap {
+  height: 100%;
+  min-height: 400px;
+  border: 1px solid var(--color-border, #e5e0d8);
+  border-radius: 12px;
+  background: var(--map-bg);
+  color: var(--title);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm, none);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --xy-background-pattern-color: var(--map-dots);   /* React Flow's background dots */
+}
+.mindmap-frame {
+  height: 450px;
+  margin-top: 12px;
+}
+
+/* Lines between boxes */
+.mindmap .react-flow__edge-path {
+  stroke: var(--map-line);
+  stroke-width: 1.6;
+}
+
+/* ---- The three shapes. Each box gets ONE of these class names. ---- */
+
+/* MAIN IDEA: squared-off rectangle, thickest border, biggest */
+.mindmap .react-flow__node.shape-main {
+  width: 240px;
+  border-radius: 4px;
+  border: 2.5px solid var(--main-border);
+  background: var(--main-fill);
+  color: var(--main-text);
+  font-size: 18px;
+  font-weight: 700;
+  padding: 16px;
+  box-shadow: var(--shadow-sm, none);
+}
+
+/* MAIN POINT: rounded rectangle, medium border */
+.mindmap .react-flow__node.shape-point {
+  width: 170px;
+  border-radius: 14px;
+  border: 1.5px solid var(--point-border);
+  background: var(--point-fill);
+  color: var(--title);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm, none);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.mindmap .react-flow__node.shape-point:hover {
+  background: var(--point-hover-fill);
+  border-color: var(--hover-border);
+  box-shadow: var(--shadow-md, none);
+}
+
+/* MAIN POINT, ZOOMED IN: bigger, label + summary inside (like the sketch) */
+.mindmap .react-flow__node.shape-point.is-focus {
+  width: 280px;
+  text-align: left;
+  padding: 14px 18px;
+  cursor: default;
+  border-color: var(--hover-border);
+  box-shadow: var(--shadow-md, none);
+}
+.mindmap .react-flow__node.shape-point.is-focus:hover {
+  background: var(--point-fill);
+}
+.node-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--title);
+}
+.node-summary {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--summary);
+  line-height: 1.4;
+}
+
+/* DETAIL (A2): pill with title + 2-line summary, thin border, light fill */
+.mindmap .react-flow__node.shape-detail {
+  width: 196px;
+  border-radius: 30px;         /* soft pill ends; stays rounder than main points (14px) even when tall */
+  border: 1px solid var(--detail-border);
+  background: var(--detail-fill);
+  color: var(--text);
+  font-size: 12px;
+  padding: 10px 26px;          /* extra side padding keeps text inside the round ends */
+  box-shadow: var(--shadow-sm, none);
+}
+.detail-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--title);
+}
+.detail-summary {
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--summary);
+  line-height: 1.35;
+  /* full text, never cut off: the pill grows taller instead */
+}
+
+/* A detail that has its own sub-details: you can click it to go deeper */
+.mindmap .react-flow__node.shape-detail.has-kids {
+  cursor: pointer;
+}
+.mindmap .react-flow__node.shape-detail.has-kids:hover {
+  border-color: var(--hover-border);
+}
+.more-count {
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--summary);
+}
+
+/* A DETAIL you zoomed into (deeper levels): wide card, keeps its soft pill corners */
+.mindmap .react-flow__node.shape-detail.is-focus {
+  width: 280px;
+  text-align: left;
+  padding: 14px 22px;
+  cursor: default;
+  border-color: var(--hover-border);
+}
+
+/* ---- Back button + path (top-left, only when zoomed in) ---- */
+.map-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(60vw, 520px);
+  font: 500 13px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--switch-text);
+}
+.map-breadcrumb button {
+  border: 1px solid var(--color-border, transparent);
+  background: var(--switch-bg);
+  color: var(--switch-text-active);
+  padding: 7px 12px;
+  border-radius: 10px;
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.map-breadcrumb .path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- UNREAD DOT: topic got new info nobody has looked at yet ---- */
+.mindmap .react-flow__node.has-unread::after {
+  content: "";
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--unread);
+  box-shadow: 0 0 0 2px var(--map-bg);   /* thin ring so it stands off the box */
+  animation: unread-pulse 1s ease-out 2;
+}
+@keyframes unread-pulse {
+  0%   { box-shadow: 0 0 0 2px var(--map-bg), 0 0 0 2px var(--unread); }
+  100% { box-shadow: 0 0 0 2px var(--map-bg), 0 0 0 12px transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mindmap .react-flow__node.has-unread::after { animation: none; }
+  .mindmap .react-flow__node.shape-point { transition: none; }
+}
+
+/* ---- Top-right controls: Show all toggle + style switcher ---- */
+.map-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+.show-all-toggle {
+  border: 1px solid var(--color-border, transparent);
+  background: var(--switch-bg);
+  color: var(--switch-text);
+  padding: 9px 14px;
+  border-radius: 10px;
+  font: 500 13px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  cursor: pointer;
+}
+.show-all-toggle:hover {
+  color: var(--switch-text-active);
+}
+.show-all-toggle[aria-pressed="true"] {
+  background: var(--switch-active);
+  color: var(--switch-text-active);
+  border-color: var(--point-border);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.15));
+}
+
+/* ---- Style switcher (Tree / Linear / Bubble) ---- */
+.style-switch {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--switch-bg);
+  border: 1px solid var(--color-border, transparent);
+  border-radius: 10px;
+}
+.style-switch button {
+  border: 0;
+  background: transparent;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font: 500 13px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--switch-text);
+  cursor: pointer;
+}
+.style-switch button:hover {
+  background: var(--color-btn-ghost-hover, transparent);
+  color: var(--switch-text-active);
+}
+.style-switch button[aria-pressed="true"] {
+  background: var(--switch-active);
+  color: var(--switch-text-active);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.15));
+}
+
+/* ---- EDIT MODE ---- */
+/* boxes can be picked up */
+.mindmap.editing .react-flow__node.draggable {
+  cursor: grab;
+}
+.mindmap.editing .react-flow__node.dragging {
+  cursor: grabbing;
+  opacity: 0.85;
+  box-shadow: var(--shadow-md, 0 6px 16px rgba(0, 0, 0, 0.18));
+}
+/* the box you'd drop onto */
+.mindmap .react-flow__node.drop-target {
+  outline: 3px dashed var(--accent);
+  outline-offset: 5px;
+}
+/* the box open in the edit panel */
+.mindmap .react-flow__node.edit-selected {
+  outline: 2px solid var(--main-border);
+  outline-offset: 4px;
+}
+/* in edit mode the connection dots appear so you can drag dot-to-dot */
+.mindmap.editing .react-flow__handle {
+  opacity: 1;
+  width: 10px;
+  height: 10px;
+  background: var(--point-border);
+  border: 2px solid var(--map-bg);
+}
+.mindmap-bubble.editing .react-flow__handle {
+  opacity: 0.9;
+}
+
+.edit-hint {
+  max-width: min(60vw, 460px);
+  padding: 7px 14px;
+  border-radius: 10px;
+  background: var(--switch-active);
+  border: 1px solid var(--point-border);
+  color: var(--switch-text-active);
+  font: 500 12.5px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  text-align: center;
+}
+.edit-paused {
+  margin-top: 3px;
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--summary);
+}
+.edit-add {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--detail-border);
+}
+.edit-add-row {
+  display: flex;
+  gap: 6px;
+}
+.edit-add-row input {
+  flex: 1;
+  min-width: 0;
+}
+.edit-error {
+  color: var(--alert-text);
+  font-weight: 600;
+}
+
+.edit-panel {
+  display: grid;
+  gap: 6px;
+  width: min(300px, 70vw);
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--switch-active);
+  border: 1px solid var(--point-border);
+  box-shadow: var(--shadow-md, 0 6px 16px rgba(0, 0, 0, 0.12));
+  color: var(--title);
+  font: 400 13px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.edit-panel label {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--summary);
+}
+.edit-panel input,
+.edit-panel textarea {
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid var(--detail-border);
+  border-radius: 8px;
+  background: var(--map-bg);
+  color: var(--title);
+  font: inherit;
+  resize: vertical;
+}
+.edit-panel input:focus-visible,
+.edit-panel textarea:focus-visible,
+.edit-panel button:focus-visible {
+  outline: 2px solid var(--hover-border);
+  outline-offset: 1px;
+}
+.edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.edit-panel button {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--detail-border);
+  background: var(--switch-bg);
+  color: var(--title);
+  font: 500 12.5px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  cursor: pointer;
+}
+.edit-panel .edit-save {
+  background: var(--success);
+  border-color: var(--success);
+  color: var(--on-success, var(--title));
+}
+.edit-panel .edit-delete {
+  color: var(--alert-text);
+  border-color: var(--unread);
+  background: transparent;
+}
+.edit-confirm p {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: var(--title);
+}
+
+/* ---- Connection dots: hidden (not in our design) ---- */
+.mindmap .react-flow__handle {
+  opacity: 0;
+}
+/* BUBBLE: move the hidden dots to the center of each box,
+   so the straight lines look like spokes coming out of the middle. */
+.mindmap-bubble .react-flow__handle {
+  top: 50%;
+  left: 50%;
+  bottom: auto;
+  right: auto;
+  transform: translate(-50%, -50%);
+}

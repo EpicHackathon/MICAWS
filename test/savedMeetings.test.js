@@ -444,3 +444,13 @@ test("reserved object keys cannot become transcript or task identifiers", () => 
   assert.throws(() => applyCommand(m, command([segment("__proto__")])));
   assert.throws(() => applyCommand(m, {type:"edit", state:{...state,actionItems:[{id:"constructor",text:"Bad identifier"}]}}));
 });
+
+ test("duplicate segments remain idempotent after a database round trip", async (t) => {
+  const store = await fixture(t);
+  let m = await store.create("a", input());
+  m = await store.command("a", m.id, 0, command([segment()]));
+  const saved = await store.get("a", m.id);
+  const repeated = await store.command("a", m.id, saved.revision, command([segment()]));
+  assert.equal(repeated.revision, saved.revision);
+  assert.deepEqual(repeated.segments, saved.segments);
+});

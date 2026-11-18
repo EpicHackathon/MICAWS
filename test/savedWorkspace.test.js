@@ -130,11 +130,20 @@ test("saved workspace autosaves corrections and recovers an uncertain response a
     [...document.querySelectorAll("button")].find(
       (b) => b.textContent === text,
     );
+  async function waitFor(predicate) {
+    const deadline = Date.now() + 5000;
+    while (!predicate() && Date.now() < deadline) {
+      await act(async () => new Promise(resolve => setTimeout(resolve, 10)));
+    }
+    assert.ok(predicate(), "Expected UI state before timeout");
+  }
   async function connect() {
     await act(async () => {
       root.render(React.createElement(Workspace));
     });
+    await waitFor(() => button("Open sample workspace"));
     await act(async () => button("Open sample workspace").click());
+    await waitFor(() => document.querySelector(".transcript-correction textarea"));
   }
   await connect();
   assert.match(document.body.textContent, /Saved review/);
@@ -154,7 +163,7 @@ test("saved workspace autosaves corrections and recovers an uncertain response a
   await act(async () => root.unmount());
   root = createRoot(document.getElementById("root"));
   await connect();
-  assert.ok(button("Retry retained change"));
+  await waitFor(() => button("Retry retained change"));
   await act(async () => button("Retry retained change").click());
   assert.equal(attempts, 2);
   assert.equal(m.segments[0].revision, 2);

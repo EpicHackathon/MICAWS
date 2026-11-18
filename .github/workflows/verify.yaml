@@ -19,7 +19,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: node --test --test-concurrency=1
+      - run: npm test
         env:
           MICAWS_TEST_DATABASE_URL: postgresql://postgres:test-only@localhost:5432/micaws_test
       - run: npm run build

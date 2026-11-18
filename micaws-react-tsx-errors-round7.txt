@@ -1,0 +1,32 @@
+src/components/MindMap.tsx(80,20): error TS2532: Object is possibly 'undefined'.
+src/components/MindMap.tsx(82,86): error TS2532: Object is possibly 'undefined'.
+src/components/MindMap.tsx(86,20): error TS2532: Object is possibly 'undefined'.
+src/components/MindMap.tsx(90,24): error TS2532: Object is possibly 'undefined'.
+src/components/MindMap.tsx(94,16): error TS2532: Object is possibly 'undefined'.
+src/components/MindMap.tsx(101,42): error TS2532: Object is possibly 'undefined'.
+src/components/MindMap.tsx(120,64): error TS2532: Object is possibly 'undefined'.
+src/components/MindMap.tsx(126,52): error TS2532: Object is possibly 'undefined'.
+src/components/MindMap.tsx(126,93): error TS2538: Type 'undefined' cannot be used as an index type.
+src/components/MindMap.tsx(137,66): error TS2532: Object is possibly 'undefined'.
+src/components/MindMap.tsx(140,65): error TS2532: Object is possibly 'undefined'.
+src/components/MindMap.tsx(143,17): error TS2532: Object is possibly 'undefined'.
+src/components/MindMap.tsx(157,29): error TS2532: Object is possibly 'undefined'.
+src/components/MindMap.tsx(157,55): error TS2532: Object is possibly 'undefined'.
+src/components/MindMap.tsx(160,34): error TS2538: Type 'undefined' cannot be used as an index type.
+src/components/MindMap.tsx(160,60): error TS2532: Object is possibly 'undefined'.
+src/components/MindMap.tsx(179,13): error TS2339: Property 'width' does not exist on type 'Size | undefined'.
+src/components/MindMap.tsx(179,20): error TS2339: Property 'height' does not exist on type 'Size | undefined'.
+src/components/MindMap.tsx(291,86): error TS2322: Type '{ id: string; label: string; summary: string; importance: number; parentId: string | null; } | undefined' is not assignable to type '{ id: string; label: string; summary: string; importance: number; parentId: string | null; }'.
+  Type 'undefined' is not assignable to type '{ id: string; label: string; summary: string; importance: number; parentId: string | null; }'.
+src/components/MindMap.tsx(292,34): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/components/MindMap.tsx(294,24): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/components/MindMap.tsx(545,30): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | null'.
+  Type 'undefined' is not assignable to type 'string | null'.
+src/components/MindMap.tsx(548,18): error TS2345: Argument of type 'string' is not assignable to parameter of type '{ id: string; label: string; summary: string; importance: number; parentId: string | null; }'.
+src/components/MindMap.tsx(579,9): error TS2322: Type '(event: MouseEvent | TouchEvent, node: Node) => void' is not assignable to type 'NodeMouseHandler<{ id: string; position: { x: number; y: number; }; measured: Size; data: { label: string | Element; }; className: string; selected: boolean; draggable: boolean; ariaLabel: string; sourcePosition: Position; targetPosition: Position; }>'.
+  Types of parameters 'event' and 'event' are incompatible.
+    Type 'MouseEvent<Element, MouseEvent>' is not assignable to type 'MouseEvent | TouchEvent'.
+      Type 'MouseEvent<Element, MouseEvent>' is missing the following properties from type 'MouseEvent': layerX, layerY, offsetX, offsetY, and 16 more.
+src/components/MindMap.tsx(712,46): error TS2345: Argument of type 'string' is not assignable to parameter of type 'SetStateAction<MapStyle>'.

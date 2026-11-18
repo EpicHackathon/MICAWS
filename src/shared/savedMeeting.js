@@ -104,7 +104,16 @@ export function newMeeting(input) {
     processingError: null,
   };
 }
-const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+// JSONB may reorder object keys; array order remains meaningful.
+export function sameJson(a, b) {
+  if (a === b) return true;
+  if (a === null || b === null || typeof a !== "object" || typeof b !== "object") return false;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  const keys = Object.keys(a);
+  return keys.length === Object.keys(b).length && keys.every(key =>
+    Object.hasOwn(b, key) && sameJson(a[key], b[key]));
+}
+const same = sameJson;
 export function applyCommand(current, raw) {
   const command = commandSchema.parse(raw);
   const next = structuredClone(current);

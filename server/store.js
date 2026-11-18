@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { createHash, randomUUID } from "node:crypto";
-import { applyCommand, fail, newMeeting } from "../src/shared/savedMeeting.js";
+import { applyCommand, fail, newMeeting, sameJson } from "../src/shared/savedMeeting.js";
 
 export class MeetingStore {
   constructor(pool, { retentionDays = 30 } = {}) {
@@ -189,7 +189,7 @@ export class MeetingStore {
       const appendOnly =
         previous &&
         previous.segments.every((s) =>
-          m.segments.some((n) => JSON.stringify(n) === JSON.stringify(s)),
+          m.segments.some((n) => sameJson(n, s)),
         ) &&
         [
           "state",
@@ -203,7 +203,7 @@ export class MeetingStore {
           "evidence",
           "lockedEvidenceTargets",
         ].every(
-          (key) => JSON.stringify(m[key]) === JSON.stringify(previous[key]),
+          (key) => sameJson(m[key], previous[key]),
         );
       if (m.revision !== revision && (!appendOnly || error)) {
         await db.query(

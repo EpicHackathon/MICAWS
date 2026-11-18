@@ -108,6 +108,17 @@ export function validateIntelligence(raw, meeting) {
   };
 }
 
+// Keep the generation grammar small. Bounds and evidence checks remain mandatory
+// in the local Zod validators before any generated result can be saved.
+export function providerSchema(value) {
+  if (Array.isArray(value)) return value.map(providerSchema);
+  if (!value || typeof value !== "object") return value;
+  const omitted = new Set(["$schema", "minimum", "maximum", "exclusiveMinimum",
+    "exclusiveMaximum", "minLength", "maxLength", "minItems", "maxItems", "pattern", "format", "default"]);
+  return Object.fromEntries(Object.entries(value).filter(([key]) => !omitted.has(key))
+    .map(([key, child]) => [key, providerSchema(child)]));
+}
+
 export function createProvider(env, reserveCall = async () => {}) {
   const cooldowns = new Map();
   if (!["gemini", "ollama", "mock"].includes(env.AI_PROVIDER))
@@ -171,6 +182,8 @@ export function createProvider(env, reserveCall = async () => {}) {
       try {
         const ai = new GoogleGenAI({
           apiKey: env.GEMINI_API_KEY,
+          // This SDK retries only when retryOptions is supplied. Omit it to
+          // preserve HTTP status codes and account for each application attempt.
           httpOptions: { timeout: remaining() },
         });
         const result = await ai.models.generateContent({
@@ -179,7 +192,7 @@ export function createProvider(env, reserveCall = async () => {}) {
           config: {
             systemInstruction: prompt,
             responseMimeType: "application/json",
-            responseJsonSchema: schema,
+            responseJsonSchema: providerSchema(schema),
             maxOutputTokens: 12000,
           },
         });

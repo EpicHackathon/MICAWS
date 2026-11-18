@@ -132,16 +132,16 @@ Default retention is 30 days from creation (configurable to 1–365 days). Expir
 
 Terminate TLS at the customer's reverse proxy; forward authorization and SSE without response buffering. Keep databases/model servers private. Restrict access to environment files, backups and logs. Logs include request ID, method, status and elapsed time, without meeting bodies or credentials. Rotate organization service keys as needed; browser sessions expire after 15 minutes. Session-secret rotation invalidates all browser sessions and pending draft recovery keys.
 
-Back up PostgreSQL and the object bucket together, encrypted. Use `pg_dump --format=custom` against the configured database; restore with `pg_restore` into a **new isolated database**, start a copy of the matching application image, and verify meeting access, evidence, and recordings before adopting it. Backup retention and deletion of older object versions must be configured separately; application deletion does not purge customer backups. Keep the prior image for rollback. This initial schema is additive; future destructive migrations require their own reviewed migration and backup plan.
+Back up PostgreSQL and the object bucket together, encrypted. Use `pg_dump --format=custom` against the configured database; restore with `pg_restore --clean --if-exists` into a **new isolated database** (these flags replace objects in the target: verify its name and never point a restore drill at the live database), start a copy of the matching application image, and verify meeting access, evidence, and recordings before adopting it. Backup retention and deletion of older object versions must be configured separately; application deletion does not purge customer backups. Keep the prior image for rollback. This initial schema is additive; future destructive migrations require their own reviewed migration and backup plan.
 
 Validation commands:
 
 ```powershell
-node --test --test-concurrency=1
+npm test
 npm.cmd run build
 python -m unittest discover -s test -p backend_transcription_test.py
 ```
 
 By default the new persistence tests use `pg-mem`; this is not evidence of real PostgreSQL durability or locking. Set `MICAWS_TEST_DATABASE_URL` to a dedicated test database to run them against PostgreSQL and enable the lease-concurrency check. Tests create and delete uniquely named schemas inside that database. CI configures PostgreSQL 17, Node 22, build checks, production dependency audit, and the stubbed Python test. CI has not been run merely by adding its workflow.
 
-Not yet certified for a paid production pilot: measure ten concurrent two-hour sessions, 95th-percentile update latency, provider costs and language accuracy on customer hardware; exercise real S3 uploads/deletion, backup restoration, process crashes, and partner identity integration. No deployment, external AI requests, real recordings, or pushes are performed by this milestone. The implementation is an integration candidate, not a guarantee of production readiness.
+Not yet certified for a paid production pilot: measure ten concurrent two-hour sessions, 95th-percentile update latency, provider costs and language accuracy on customer hardware; exercise real S3 uploads/deletion, backup restoration, process crashes, and partner identity integration. See [VALIDATION.md](VALIDATION.md) for current local container, synthetic live-provider and backup-restore results. No customer deployment, real recordings, or pushes are included. The implementation is an integration candidate, not a guarantee of production readiness.

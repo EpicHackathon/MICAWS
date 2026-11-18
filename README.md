@@ -103,7 +103,7 @@ Install [Ollama](https://ollama.com/download), open a terminal, and download a m
 npm test
 ```
 
-Runs with `node --test`. Covers map edits, merging, node limits, processor retry/quota behavior, microphone chunking/WAV encoding, transcription proxy, and UI flows. One test (`recording.test.js`) exercises the full microphone hook and may take a few minutes.
+Runs serially with Node’s test runner and the `tsx` loader (`npm test`). Covers map edits, merging, node limits, processor retry/quota behavior, microphone chunking/WAV encoding, transcription proxy, and UI flows. One test (`recording.test.js`) exercises the full microphone hook and may take a few minutes.
 
 ## Build
 
@@ -159,7 +159,7 @@ Translate transcript selects a separate AI translation, displayed alongside orig
 
 Vercel serves the JavaScript AI endpoints, but cannot access services on your laptop's localhost. Host transcription separately with appropriate access controls and a supported frontend route. A local Ollama server needs a reachable server-side address for remote deployments. In Docker Desktop, accessing host Ollama may require `OLLAMA_URL=http://host.docker.internal:11434`; do not expose an unauthenticated Ollama service publicly. Browser extraction and memory-only playback need no file-storage server.
 
-Run `node --test --test-concurrency=1` and `npm.cmd run build`. Python transcription unit checks: `.\.venv-whisperx\Scripts\python.exe -m unittest discover -s test -p backend_transcription_test.py`. Automated tests use simulated AI and microphone replies; document tests parse generated PDF/PPTX fixtures and recording tests inspect WAV bytes. Live microphone, multilingual recognition/translation quality, Docker and deployed hosting require separate end-to-end checks. AI semantic grouping and task accuracy are not guaranteed by schema validation.
+Run `npm test` and `npm.cmd run build`. Python transcription unit checks: `.\.venv-whisperx\Scripts\python.exe -m unittest discover -s test -p backend_transcription_test.py`. Automated tests use simulated AI and microphone replies; document tests parse generated PDF/PPTX fixtures and recording tests inspect WAV bytes. Live microphone, multilingual recognition/translation quality, Docker and deployed hosting require separate end-to-end checks. AI semantic grouping and task accuracy are not guaranteed by schema validation.
 
 ## Workspace layout
 
@@ -168,3 +168,17 @@ Recording and speech-language controls are grouped at the top. Map output langua
 ## In-page instructions
 
 Both workspaces include a collapsed **How to use this workspace** guide near the top. Expand individual topics for getting started, controls, evidence, corrections, decisions, languages, saving/recovery, and troubleshooting. The guide distinguishes local recording from server-backed saved meetings and clearly labels the synthetic demo. Future functionality changes must update the affected in-page guide and README together.
+
+### TypeScript runtime and reliable retries
+
+Use Node.js 22 and run `npm ci` after pulling dependency changes. `npm test`,
+`npm start`, `npm run worker`, and `npm run demo:saved` load shared TypeScript
+through `tsx`; direct `node server/main.js` is no longer sufficient. The pilot
+container includes this runtime and type-checks the frontend during its build.
+Saved transcript retries compare JSON structurally, so PostgreSQL key ordering
+does not create false conflicts. The saved
+workspace provider leaves SDK retry options unset (one transport attempt in the
+locked SDK); each application retry reserves its own request allowance. A smaller
+Gemini generation schema avoids provider grammar limits; strict local validation
+still checks bounds, citations, and protected edits before saving.
+The request allowance is not a dollar spending limit.

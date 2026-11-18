@@ -42,7 +42,7 @@ test('typed input, details navigation, view toggle and reset work through the ap
   const server = await createServer({ server: { middlewareMode: true, ws: false }, appType: 'custom' });
   t.after(() => server.close());
   const { createRoot } = await import('react-dom/client');
-  const { default: App } = await server.ssrLoadModule('/src/App.jsx');
+  const { default: App } = await server.ssrLoadModule('/src/App.tsx');
   const root = createRoot(document.getElementById('root'));
   const button = text => [...document.querySelectorAll('button')].find(item => item.textContent.trim() === text);
   const topicCount = () => Number(document.querySelector('[data-topic-count]')?.dataset.topicCount);

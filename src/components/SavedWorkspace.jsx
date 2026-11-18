@@ -2,7 +2,7 @@ import WorkspaceHelp from './WorkspaceHelp.jsx';
 import React, { useEffect, useRef, useState } from "react";
 import { createMicawsClient } from "../../sdk/client.js";
 import { draftVault } from "../services/recoveryDraft.js";
-import MeetingView from "./MeetingView.jsx";
+import MeetingView from "./MeetingView.tsx";
 import TranscriptCorrection from "./TranscriptCorrection.jsx";
 import { formatTime } from "../shared/formatTime.js";
 import "./savedWorkspace.css";
