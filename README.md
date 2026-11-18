@@ -23,8 +23,8 @@ MICAWS/
     summary.js        POST /api/summary — end-of-meeting summary generation
     ollama.js         Ollama provider helper
   src/
-    App.jsx           Main app: recording controls, segments, processor + summary wiring
-    main.jsx          React entry point
+    App.tsx           Main app: recording controls, segments, processor + summary wiring
+    main.tsx          React entry point
     index.html        Vite HTML entry
     styles.css        Theme tokens (neutral / warm / cool / dark) and base styles
     shared/
@@ -35,8 +35,8 @@ MICAWS/
       summarySchema.js   Summary request/response schemas
       formatTime.js      Timestamp formatting helpers
     components/
-      MeetingView.jsx    Map + transcript side panel + notes card + summary
-      MindMap.jsx        React Flow mind map with inline edit panel
+      MeetingView.tsx    Map + transcript side panel + notes card + summary
+      MindMap.tsx        React Flow mind map with inline edit panel
       TranscriptPanel.jsx Scrolling transcript list
       ManualInput.jsx    Accessible typed meeting input
       MicIcon.jsx / StopIcon.jsx

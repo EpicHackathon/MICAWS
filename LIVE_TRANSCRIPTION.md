@@ -14,7 +14,7 @@ The browser uses AudioWorklet to capture continuously and make a separate comple
 - `src/services/transcribeAudio.js`: accepts `(audioBlob, abortSignal, { chunkId, startSeconds })`, uploads multipart audio, and returns the validated list of transcript segments.
 - `src/hooks/useMicrophone.js`: exposes `start(startSeconds)`, `stop()`, `retry()`, `reset()`, `status`, and `error` to React. Calls `onTranscript(segments, chunkEndSeconds)` after each successful chunk, including silent chunks with an empty list.
 - `src/hooks/useMeetingProcessor.js`: processes new transcript entries as they arrive, drains entries received during an active map request, and retries on a 10-second timer while recording.
-- `src/App.jsx`: appends absolute transcript timestamps and connects audio retry to the existing Process pending / retry button.
+- `src/App.tsx`: appends absolute transcript timestamps and connects audio retry to the existing Process pending / retry button.
 - `test/microphone.test.js`: regression coverage for chunk boundaries, WAV encoding, ordering, silence, retry, reset cancellation, and Stop.
 
 No new npm or Python dependencies are required. The existing `backend/main.py` and `backend/whisperx/transcription.py` already support chunk IDs and start-time offsets.
