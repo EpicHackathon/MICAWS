@@ -9,9 +9,9 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "test": "node --import tsx --test --test-concurrency=1",
-    "start": "node --import tsx server/main.js",
-    "worker": "node --import tsx server/main.js worker",
-    "demo:saved": "node --import tsx scripts/saved-demo.js"
+    "start": "node --import tsx server/main.ts",
+    "worker": "node --import tsx server/main.ts worker",
+    "demo:saved": "node --import tsx scripts/saved-demo.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1171.0",
@@ -23,11 +23,12 @@
     "pg": "^8.23.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "zod": "^4.1.0",
-    "tsx": "^4.23.15"
+    "tsx": "^4.23.15",
+    "zod": "^4.1.0"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "jsdom": "^26.1.0",

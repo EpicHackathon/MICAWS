@@ -19,47 +19,47 @@ You can type meeting text, attach supporting PDF/PPTX/TXT materials, edit multip
 ```
 MICAWS/
   api/
-    process.js        POST /api/process — mind-map updates (Gemini/Ollama), validation
-    summary.js        POST /api/summary — end-of-meeting summary generation
-    ollama.js         Ollama provider helper
+    process.ts        POST /api/process — mind-map updates (Gemini/Ollama), validation
+    summary.ts        POST /api/summary — end-of-meeting summary generation
+    ollama.ts         Ollama provider helper
   src/
-    App.jsx           Main app: recording controls, segments, processor + summary wiring
-    main.jsx          React entry point
+    App.tsx           Main app: recording controls, segments, processor + summary wiring
+    main.tsx          React entry point
     index.html        Vite HTML entry
     styles.css        Theme tokens (neutral / warm / cool / dark) and base styles
     shared/
-      meetingSchema.js   Zod schemas: meeting state, nodes, edges, action items, user notes
-      demo.js            Mock demo batches and expected states
-      mapEdits.js        Hand-edits: add/move/delete nodes and user notes
-      mockMeeting.js     Sample meeting for the dev-mode sandbox
-      summarySchema.js   Summary request/response schemas
-      formatTime.js      Timestamp formatting helpers
+      meetingSchema.ts   Zod schemas: meeting state, nodes, edges, action items, user notes
+      demo.ts            Mock demo batches and expected states
+      mapEdits.ts        Hand-edits: add/move/delete nodes and user notes
+      mockMeeting.ts     Sample meeting for the dev-mode sandbox
+      summarySchema.ts   Summary request/response schemas
+      formatTime.ts      Timestamp formatting helpers
     components/
-      MeetingView.jsx    Map + transcript side panel + notes card + summary
-      MindMap.jsx        React Flow mind map with inline edit panel
-      TranscriptPanel.jsx Scrolling transcript list
-      ManualInput.jsx    Accessible typed meeting input
-      MicIcon.jsx / StopIcon.jsx
+      MeetingView.tsx    Map + transcript side panel + notes card + summary
+      MindMap.tsx        React Flow mind map with inline edit panel
+      TranscriptPanel.tsx Scrolling transcript list
+      ManualInput.tsx    Accessible typed meeting input
+      MicIcon.tsx / StopIcon.tsx
       meetingLayout.css  Map/transcript layout + notes card styling
       mindmap.css        Node layout and styles for tree/linear/bubble views
     hooks/
-      useMeetingProcessor.js   Batches transcript segments, calls the AI map API,
+      useMeetingProcessor.ts   Batches transcript segments, calls the AI map API,
                                applies hand edits and user notes, handles retries
-      useMeetingSummary.js     Generates and regenerates the end-of-meeting summary
-      useMicrophone.js         Microphone capture, chunking, upload queue, retry
+      useMeetingSummary.ts     Generates and regenerates the end-of-meeting summary
+      useMicrophone.ts         Microphone capture, chunking, upload queue, retry
     services/
-      processTranscript.js   Fetch wrapper for POST /api/process
-      summarizeMeeting.js    Fetch wrapper for POST /api/summary
-      microphoneSession.js   Audio capture and chunk upload lifecycle
-      transcribeAudio.js     WhisperX multipart upload
-      audio/chunk-processor.js  10-second audio chunking
-      audio/encodeWav.js     WAV blob encoding
+      processTranscript.ts   Fetch wrapper for POST /api/process
+      summarizeMeeting.ts    Fetch wrapper for POST /api/summary
+      microphoneSession.ts   Audio capture and chunk upload lifecycle
+      transcribeAudio.ts     WhisperX multipart upload
+      audio/chunk-processor.ts  10-second audio chunking
+      audio/encodeWav.ts     WAV blob encoding
   test/
-    processor.test.js, mapEdits.test.js, merging.test.js, limits.test.js,
-    microphone.test.js, recording.test.js, ui.test.js, transcriptionProxy.test.js,
-    helpers/audio.js
+    processor.test.ts, mapEdits.test.ts, merging.test.ts, limits.test.ts,
+    microphone.test.ts, recording.test.ts, ui.test.ts, transcriptionProxy.test.ts,
+    helpers/audio.ts
   vercel.json         Serverless function config for /api/*
-  vite.config.js      Vite dev server + proxy to Python transcription backend
+  vite.config.ts      Vite dev server + proxy to Python transcription backend
 ```
 
 ## Features
@@ -103,7 +103,7 @@ Install [Ollama](https://ollama.com/download), open a terminal, and download a m
 npm test
 ```
 
-Runs serially with Node’s test runner and the `tsx` loader (`npm test`). Covers map edits, merging, node limits, processor retry/quota behavior, microphone chunking/WAV encoding, transcription proxy, and UI flows. One test (`recording.test.js`) exercises the full microphone hook and may take a few minutes.
+Runs serially with Node’s test runner and the `tsx` loader (`npm test`). Covers map edits, merging, node limits, processor retry/quota behavior, microphone chunking/WAV encoding, transcription proxy, and UI flows. One test (`recording.test.ts`) exercises the full microphone hook and may take a few minutes.
 
 ## Build
 
@@ -115,9 +115,9 @@ Outputs to `dist/`.
 
 ## What the AI is told (system prompts)
 
-**Mind map** (`api/process.js`): Review existing topics, merge similar ones, add new information from transcript, group related topics without inventing categories, never delete locked or user-added nodes, never delete user notes, max 5 levels, max 4 children per node.
+**Mind map** (`api/process.ts`): Review existing topics, merge similar ones, add new information from transcript, group related topics without inventing categories, never delete locked or user-added nodes, never delete user notes, max 5 levels, max 4 children per node.
 
-**Summary** (`api/summary.js`): Write overview (2–4 sentences), key points (3–6), and next-time follow-ups (0–5). Ground everything in the transcript, map, and user notes. Never invent facts.
+**Summary** (`api/summary.ts`): Write overview (2–4 sentences), key points (3–6), and next-time follow-ups (0–5). Ground everything in the transcript, map, and user notes. Never invent facts.
 
 
 
@@ -172,9 +172,8 @@ Both workspaces include a collapsed **How to use this workspace** guide near the
 ### TypeScript runtime and reliable retries
 
 Use Node.js 22 and run `npm ci` after pulling dependency changes. `npm test`,
-`npm start`, `npm run worker`, and `npm run demo:saved` load shared TypeScript
-through `tsx`; direct `node server/main.js` is no longer sufficient. The pilot
-container includes this runtime and type-checks the frontend during its build.
+`npm start`, `npm run worker`, and `npm run demo:saved` use `tsx` to run the TypeScript entry points. The pilot container includes this
+runtime and type-checks the application and server during its build.
 Saved transcript retries compare JSON structurally, so PostgreSQL key ordering
 does not create false conflicts. The saved
 workspace provider leaves SDK retry options unset (one transport attempt in the

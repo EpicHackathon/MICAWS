@@ -32,19 +32,19 @@ docker compose --env-file .env.pilot -f compose.pilot.yaml up --build -d
 
 Open `http://localhost:8080/workspace`. The production container includes the API, bounded worker pool, built React assets, and private PostgreSQL connection. The database has a persistent Docker volume. Neither PostgreSQL nor a model server is published by this Compose file.
 
-Without Docker, configure `DATABASE_URL`, load the other settings into the process environment, run `npm run build`, then `node --env-file=.env.pilot server/main.js`. Use `server/main.js api` and `server/main.js worker` for separate processes; each applies the initial idempotent schema. Worker concurrency defaults to two, configurable up to ten.
+Without Docker, configure `DATABASE_URL`, load the other settings into the process environment, run `npm run build`, then `node --env-file=.env.pilot --import tsx server/main.ts`. Use `node --env-file=.env.pilot --import tsx server/main.ts api` and `node --env-file=.env.pilot --import tsx server/main.ts worker` for separate processes; each applies the initial idempotent schema. Worker concurrency defaults to two, configurable up to ten.
 
 For local UI development, run the saved API on port 8080 and Vite separately; `/workspace` uses Vite's `/api/v1` proxy. Add the Vite origin to `EMBED_ORIGINS` for development. `SAVED_API_URL` can override the proxy target. Do not refresh or replace an existing microphone-demo page with pending audio.
 
 ## Connect your partner backend
 
-Import `createMicawsClient` from `sdk/client.js` in the partner's **server code**. The customer's application must authenticate its users and check their membership before issuing sessions; this project does not supply a separate password/account system.
+Import `createMicawsClient` from `sdk/client.ts` in the partner's **server code**. The customer's application must authenticate its users and check their membership before issuing sessions; this project does not supply a separate password/account system.
 
-```js
-import { createMicawsClient } from './sdk/client.js';
+```ts
+import { createMicawsClient } from './sdk/client.ts';
 const micaws = createMicawsClient({
   baseUrl: process.env.MICAWS_URL,
-  token: process.env.MICAWS_SERVICE_KEY,
+  token: process.env.MICAWS_SERVICE_KEY!,
 });
 const meeting = await micaws.create({ title: 'Product review', series: 'Product team' });
 const browserSession = await micaws.issueSession(meeting.id, 'editor');
@@ -57,11 +57,14 @@ For standalone testing, paste a **browser session token** into the connection fo
 
 ## Embed and brand
 
-The partner's frontend imports `embedMicaws` from `sdk/embed.js`:
+The partner's frontend imports `embedMicaws` from `sdk/embed.ts`:
 
-```js
+```ts
+import { embedMicaws } from './sdk/embed.ts';
+const container = document.getElementById('meeting-workspace');
+if (!container) throw new Error('Meeting workspace container is missing.');
 const workspace = embedMicaws({
-  container: document.getElementById('meeting-workspace'),
+  container,
   workspaceUrl: 'https://meetings.example.com/workspace',
   getSession: () => fetch('/your-backend/authorized-meeting-session').then(r => r.json()),
 });
@@ -124,7 +127,7 @@ Every endpoint except health/readiness/config requires `Authorization: Bearer ..
 | `GET, PUT /api/v1/meetings/:id/recording` | Private WAV download / upload (PUT requires If-Match) |
 | `GET /api/v1/meetings/:id/recovery-key` | Editor-only encrypted draft recovery key |
 
-Commands are `segments`, `edit` (complete valid map state), `metadata`, `decision`, `task`, `evidence`, `finish`, `reopen`, and `retry`. Exact schemas live in `src/shared/savedMeeting.js`. SSE uses authenticated fetch instead of putting tokens in URLs. Reconnect fetches the authoritative meeting; the stream only announces revisions.
+Commands are `segments`, `edit` (complete valid map state), `metadata`, `decision`, `task`, `evidence`, `finish`, `reopen`, and `retry`. Exact schemas live in `src/shared/savedMeeting.ts`. SSE uses authenticated fetch instead of putting tokens in URLs. Reconnect fetches the authoritative meeting; the stream only announces revisions.
 
 ## Operations and release checks
 

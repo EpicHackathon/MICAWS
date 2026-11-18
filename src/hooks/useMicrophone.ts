@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { MicrophoneSession } from '../services/microphoneSession.js';
 import { RecordingArchive } from '../audio/recordingArchive.js';
 
-export function useMicrophone(onTranscript: (segments: TranscriptionSegment[], endSeconds: number) => void, { language = 'auto' } = {}) {
+export function useMicrophone(onTranscript: (segments: TranscriptionSegment[], endSeconds: number) => void, { language = 'auto', workletUrl }: { language?: string; workletUrl: string }) {
   const [status, setStatus] = useState<MicrophoneStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const active = useRef<MicrophoneSession | null>(null);
@@ -45,6 +45,7 @@ export function useMicrophone(onTranscript: (segments: TranscriptionSegment[], e
     }
     setError(null);
     const session = new MicrophoneSession({
+      workletUrl,
       startSeconds: Math.max(startSeconds, archive.current.duration), language,
       onAudioChunk: (samples, sampleRate, start) => {
         if (active.current !== session) return false;
