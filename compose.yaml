@@ -25,6 +25,8 @@ services:
       - whisperx-cache:/root/.cache
 
   diart:
+    profiles:
+      - diart
     build:
       context: .
       dockerfile: Dockerfile.diart
