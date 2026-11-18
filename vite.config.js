@@ -11,6 +11,7 @@ export default defineConfig(({ mode }) => {
       allowedHosts: ['micaws.us'],
       watch: { ignored: ['**/.venv*/**', '**/.cache/**'] },
       proxy: {
+        '/api/v1': { target: env.SAVED_API_URL || 'http://127.0.0.1:8080', changeOrigin: true },
         '/api/transcribe': {
           target: env.TRANSCRIPTION_URL || 'http://127.0.0.1:8000',
           changeOrigin: true,

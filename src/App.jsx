@@ -144,6 +144,7 @@ export default function App() {
           {{ idle: 'Ready to record', starting: 'Waiting for microphone permission…', recording: 'Live recording in progress…', transcribing: 'Finishing pending transcription…' }[microphone.status]}
         </p>
       </div>
+      <p className="saved-workspace-link"><a href="/workspace" target="_blank" rel="noopener noreferrer">Open saved meeting workspace</a> <span>Requires the saved-meeting server. Opens separately so your current audio stays here.</span></p>
 
       {/* CONTROL PANEL */}
       <div className="control-panel">

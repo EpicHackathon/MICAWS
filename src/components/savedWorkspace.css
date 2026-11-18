@@ -1,0 +1,236 @@
+.saved-shell {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 28px;
+  color: var(--text, #192f32);
+}
+.saved-header,
+.saved-meeting-heading,
+.saved-actions,
+.task-progress {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.saved-header {
+  border-bottom: 1px solid #ccd7d5;
+  padding-bottom: 20px;
+  margin-bottom: 28px;
+}
+.saved-header [role="status"] {
+  margin-left: auto;
+}
+.saved-welcome {
+  max-width: 650px;
+  margin: 70px auto;
+}
+.saved-shell h1 {
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  letter-spacing: -0.035em;
+}
+.saved-shell h2 {
+  font-size: 1.2rem;
+}
+.saved-shell p {
+  margin: 9px 0;
+}
+.saved-workspace-link {
+  margin: 0 0 16px;
+  font-size: 0.88rem;
+  color: var(--color-text-muted);
+}
+.saved-workspace-link a {
+  color: inherit;
+  font-weight: 600;
+}
+.transcript-correction {
+  display: grid;
+  gap: 12px;
+  border-bottom: 1px solid #ccd7d5;
+  padding: 18px 0;
+}
+.saved-shell form {
+  display: grid;
+  gap: 14px;
+  margin: 18px 0;
+}
+.saved-library form {
+  grid-template-columns: 1fr 1fr auto;
+  align-items: end;
+}
+.saved-shell label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.92rem;
+}
+.saved-shell input,
+.saved-shell textarea,
+.saved-shell select {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #b5c8c4;
+  border-radius: 8px;
+  background: var(--surface, #fff);
+  color: inherit;
+  font: inherit;
+}
+.saved-shell textarea {
+  min-height: 85px;
+  resize: vertical;
+}
+.saved-shell button {
+  border: 1px solid #b7ccc7;
+  border-radius: 9px;
+  padding: 9px 13px;
+  background: var(--surface, #fff);
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+.saved-shell button:hover:not(:disabled) {
+  background: #e6f1ed;
+  color: #183a31;
+}
+.saved-shell button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.saved-shell :focus-visible {
+  outline: 3px solid #137b67;
+  outline-offset: 3px;
+}
+.saved-badge {
+  font-size: 0.8rem;
+  border: 1px solid #c2d2cd;
+  border-radius: 20px;
+  padding: 5px 10px;
+}
+.saved-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin-top: 24px;
+}
+.saved-card,
+.saved-library {
+  border: 1px solid #ccd7d5;
+  border-radius: 16px;
+  padding: 24px;
+  background: var(--surface, #fff);
+  margin-bottom: 20px;
+  overflow-wrap: anywhere;
+}
+.saved-grid .saved-card {
+  margin-bottom: 0;
+}
+.saved-card article {
+  border-bottom: 1px solid #e1e8e5;
+  padding: 14px 0;
+}
+.saved-card article:last-child {
+  border-bottom: 0;
+}
+.saved-card audio {
+  width: 100%;
+  margin: 16px 0;
+}
+.saved-shell .muted {
+  color: #566c66;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+.saved-alert {
+  border: 1px solid #d7b179;
+  border-radius: 12px;
+  background: #fff6e6;
+  color: #573b12;
+  padding: 18px;
+  margin-bottom: 20px;
+}
+.saved-alert pre {
+  white-space: pre-wrap;
+  max-height: 240px;
+  overflow: auto;
+}
+.saved-meeting-heading {
+  justify-content: space-between;
+  margin: 30px 0;
+}
+.meeting-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  max-height: 330px;
+  overflow: auto;
+}
+.meeting-tiles button {
+  text-align: left;
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+}
+.meeting-tiles [aria-current="page"] {
+  border: 2px solid #137b67;
+}
+.meeting-tiles span {
+  font-size: 0.85rem;
+}
+.evidence-links {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+.evidence-links button {
+  font-size: 0.8rem;
+  padding: 4px 9px;
+  color: #12614f;
+}
+.saved-shell details > summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 10px 0;
+}
+.saved-shell blockquote {
+  margin: 10px 0;
+  border-left: 3px solid #137b67;
+  padding-left: 16px;
+  line-height: 1.6;
+}
+.task-progress {
+  display: flex !important;
+  padding: 12px 0;
+}
+.task-progress > span {
+  flex: 1;
+}
+.task-progress select {
+  width: 150px;
+}
+@media (max-width: 800px) {
+  .saved-shell {
+    padding: 16px;
+  }
+  .saved-grid {
+    grid-template-columns: 1fr;
+  }
+  .saved-card {
+    padding: 18px;
+  }
+  .saved-header [role="status"] {
+    margin-left: 0;
+  }
+}
+@media (max-width: 600px) {
+  .saved-library form {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .saved-shell * {
+    scroll-behavior: auto;
+    transition: none;
+  }
+}

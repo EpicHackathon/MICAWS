@@ -507,7 +507,8 @@ export default function MindMap({
   function handleNodeClick(event: React.MouseEvent, node: Node) {
     const clicked = allNodes.find(n => n.id === node.id);
     if (!clicked) return;
-    if (editMode) { openEditor(clicked); return; }   // edit mode: click = open the edit panel
+    if (editMode) { openEditor(clicked); return; }
+    onSelectNode?.(clicked.id);   // edit mode: click = open the edit panel
     // Micah's details panel still opens from the topic list view.
     // Main points ALWAYS open (even with no details yet: you still see their summary card).
     // Deeper boxes open when they have their own sub-details.
