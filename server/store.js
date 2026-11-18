@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { createHash, randomUUID } from "node:crypto";
 import { applyCommand, fail, newMeeting } from "../src/shared/savedMeeting.js";
+import { isDeepStrictEqual } from "node:util";
 
 export class MeetingStore {
   constructor(pool, { retentionDays = 30 } = {}) {
@@ -189,7 +190,7 @@ export class MeetingStore {
       const appendOnly =
         previous &&
         previous.segments.every((s) =>
-          m.segments.some((n) => JSON.stringify(n) === JSON.stringify(s)),
+          m.segments.some((n) => isDeepStrictEqual(n, s)),
         ) &&
         [
           "state",
@@ -202,9 +203,7 @@ export class MeetingStore {
           "decisions",
           "evidence",
           "lockedEvidenceTargets",
-        ].every(
-          (key) => JSON.stringify(m[key]) === JSON.stringify(previous[key]),
-        );
+        ].every((key) => isDeepStrictEqual(m[key], previous[key]));
       if (m.revision !== revision && (!appendOnly || error)) {
         await db.query(
           "UPDATE jobs SET lease=NULL,lease_until=NULL,available_at=now() WHERE org=$1 AND meeting_id=$2",
