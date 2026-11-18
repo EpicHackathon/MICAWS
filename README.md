@@ -164,3 +164,7 @@ Run `node --test --test-concurrency=1` and `npm.cmd run build`. Python transcrip
 ## Workspace layout
 
 Recording and speech-language controls are grouped at the top. Map output language sits in the Mind map header; transcript translation, retry status and typed input are in the transcript panel. Summaries and action items appear below the map, followed by supporting materials and recording playback/download. The raw Connections list has been removed; relationships remain visible in the map and accessible outline. The workspace uses responsive cards, consistent controls and the existing four themes.
+
+## In-page instructions
+
+Both workspaces include a collapsed **How to use this workspace** guide near the top. Expand individual topics for getting started, controls, evidence, corrections, decisions, languages, saving/recovery, and troubleshooting. The guide distinguishes local recording from server-backed saved meetings and clearly labels the synthetic demo. Future functionality changes must update the affected in-page guide and README together.

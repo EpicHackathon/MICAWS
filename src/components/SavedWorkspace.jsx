@@ -1,3 +1,4 @@
+import WorkspaceHelp from './WorkspaceHelp.jsx';
 import React, { useEffect, useRef, useState } from "react";
 import { createMicawsClient } from "../../sdk/client.js";
 import { draftVault } from "../services/recoveryDraft.js";
@@ -312,6 +313,7 @@ export default function SavedWorkspace() {
           </button>
         )}
       </header>
+      <WorkspaceHelp mode="saved" demo={config?.demo} />
       {error && (
         <p role="alert" className="saved-alert">
           {error}

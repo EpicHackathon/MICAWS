@@ -1,3 +1,4 @@
+import WorkspaceHelp from './components/WorkspaceHelp.jsx';
 import { useMicrophone } from './hooks/useMicrophone.js';
 import React, { useState, useRef, useEffect } from 'react';
 import { useMeetingProcessor } from './hooks/useMeetingProcessor.js';
@@ -138,6 +139,7 @@ export default function App() {
           <button type="button" data-active={theme === 'dark'} onClick={() => setTheme('dark')}>Dark</button>
         </div>
       </header>
+      <WorkspaceHelp mode="local" />
       <div className="workspace-intro" id="workspace">
         <div><p className="eyebrow">A little more clarity</p><h1>Your meeting, connected.</h1><p>Capture the conversation. See the bigger picture.</p></div>
         <p className="app-status" role="status"><span className={'status-dot' + (isRecording ? ' active' : '')} aria-hidden="true"/>
