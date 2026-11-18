@@ -182,3 +182,9 @@ locked SDK); each application retry reserves its own request allowance. A smalle
 Gemini generation schema avoids provider grammar limits; strict local validation
 still checks bounds, citations, and protected edits before saving.
 The request allowance is not a dollar spending limit.
+
+The **How to use this workspace** guide includes jump links beside each topic.
+They move focus to the relevant controls and reveal collapsed sections, including
+the transcript panel and meeting settings. Controls unavailable in your current
+session are labeled instead of offering a broken link. Navigation does not start
+recording, submit forms, or discard pending work.

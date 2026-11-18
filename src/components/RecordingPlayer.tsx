@@ -6,7 +6,7 @@ type Props = {
 };
 
 export default function RecordingPlayer({ recording, audioRef }: Props) {
-  return <section aria-label="Meeting recording" className="recording-card">
+  return <section aria-label="Meeting recording" id="help-recording" tabIndex={-1} className="recording-card">
     <span className="eyebrow">Revisit the conversation</span>
     <h2>Meeting recording</h2>
     {!recording ? <p>Your recording will be ready here after you stop. Select a transcript timestamp to jump to that moment.</p> : <>

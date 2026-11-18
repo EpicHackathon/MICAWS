@@ -53,6 +53,16 @@ test('typed input, details navigation, view toggle and reset work through the ap
   };
   try {
     await act(async () => root.render(React.createElement(App)));
+    const outlineLink = document.querySelector('.workspace-help a[href="#help-outline"]');
+    assert.ok(outlineLink);
+    await act(async () => outlineLink.click());
+    assert.equal(document.getElementById('help-outline').open, true);
+    assert.equal(document.activeElement.id, 'help-outline');
+    await click('Hide transcript');
+    await act(async () => document.querySelector('.workspace-help a[href="#help-transcript"]').click());
+    assert.ok(button('Hide transcript'), 'Help reveals the collapsed transcript');
+    assert.equal(document.activeElement.id, 'help-transcript');
+    assert.equal(requests.length, 0, 'Navigation does not submit meeting input');
     assert.equal(button('Send test text').disabled, true);
     const textarea = document.querySelector('textarea');
     await act(async () => {

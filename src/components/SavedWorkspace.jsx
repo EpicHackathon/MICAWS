@@ -292,7 +292,7 @@ export default function SavedWorkspace() {
 
   return (
     <main className="saved-shell">
-      <header className="saved-header">
+      <header id="help-account" tabIndex={-1} className="saved-header">
         <a className="brand" href="/workspace">
           <span className="brand-mark" aria-hidden="true">
             M
@@ -320,7 +320,7 @@ export default function SavedWorkspace() {
         </p>
       )}
       {!session ? (
-        <section className="saved-welcome">
+        <section id="help-connect" tabIndex={-1} className="saved-welcome">
           <p className="eyebrow">Keep the conversation connected</p>
           <h1>Your meetings, with the evidence.</h1>
           <p>
@@ -368,7 +368,7 @@ export default function SavedWorkspace() {
       ) : (
         <>
           {!session.meetingId && (
-            <section className="saved-library" aria-label="Saved meetings">
+            <section id="help-library" tabIndex={-1} className="saved-library" aria-label="Saved meetings">
               <div>
                 <h1>Meeting library</h1>
                 <p>Saved to your organization. Select a meeting to continue.</p>
@@ -429,7 +429,7 @@ export default function SavedWorkspace() {
           )}
           {meeting && (
             <>
-              <section className="saved-meeting-heading">
+              <section id="help-meeting" tabIndex={-1} className="saved-meeting-heading">
                 <div>
                   <p className="eyebrow">
                     {meeting.series || "Meeting workspace"}
@@ -515,7 +515,7 @@ export default function SavedWorkspace() {
                 </div>
               </section>
               {draft && (
-                <aside className="saved-alert" aria-label="Recovered change">
+                <aside id="help-recovery" tabIndex={-1} className="saved-alert" aria-label="Recovered change">
                   <strong>Pending change</strong>
                   <p>
                     Review your retained change before retrying. Conflicting map
@@ -601,7 +601,7 @@ export default function SavedWorkspace() {
                 }
               />
               <div className="saved-grid">
-                <section className="saved-card">
+                <section id="help-highlights" tabIndex={-1} className="saved-card">
                   <h2>Cited highlights</h2>
                   {meeting.summary.length ? (
                     meeting.summary.map((p, i) => (
@@ -672,7 +672,7 @@ export default function SavedWorkspace() {
                     ))}
                   </details>
                 </section>
-                <section className="saved-card">
+                <section id="help-search" tabIndex={-1} className="saved-card">
                   <h2>Search and ask</h2>
                   <form
                     onSubmit={(e) => {
@@ -837,7 +837,7 @@ export default function SavedWorkspace() {
                     private; playback requires meeting access.
                   </p>
                 </section>
-                <section className="saved-card">
+                <section id="help-decisions" tabIndex={-1} className="saved-card">
                   <h2>Decisions and open questions</h2>
                   {meeting.decisions.map((d) => (
                     <article key={d.id}>
@@ -971,7 +971,7 @@ export default function SavedWorkspace() {
                   )}
                 </section>
               </div>
-              <section className="saved-card">
+              <section id="help-progress" tabIndex={-1} className="saved-card">
                 <h2>Task progress</h2>
                 {meeting.state.actionItems.length ? (
                   meeting.state.actionItems.map((t) => (
@@ -1003,7 +1003,7 @@ export default function SavedWorkspace() {
                 )}
               </section>
               {editable && (
-                <section className="saved-card">
+                <section id="help-corrections" tabIndex={-1} className="saved-card">
                   <h2>Transcript corrections</h2>
                   <p>
                     Corrections trigger reassessment. Intentional map and task
@@ -1073,7 +1073,7 @@ export default function SavedWorkspace() {
                   </form>
                 </section>
               )}
-              <section className="saved-card">
+              <section id="help-history" tabIndex={-1} className="saved-card">
                 <h2>Related meeting history</h2>
                 {session.meetingId ? (
                   <p>
@@ -1127,7 +1127,7 @@ export default function SavedWorkspace() {
                 )}
               </section>
               {editable && (
-                <details className="saved-card">
+                <details id="help-settings" tabIndex={-1} className="saved-card">
                   <summary>Meeting settings</summary>
                   <form
                     key={`${meeting.id}-${meeting.outputLanguage}-${meeting.translationLanguage}`}

@@ -60,7 +60,7 @@ export function MeetingResults({ segments, isRecording, clearTranscript, onManua
 
   return (
     <>
-      <div className="session-toolbar">
+      <div id="help-session" tabIndex={-1} className="session-toolbar">
         <div className="session-progress" role="status">{children?.({ isProcessing }) || null}</div>
         <button className="btn-ghost" onClick={resetMeeting}>Reset session</button>
       </div>
@@ -149,7 +149,7 @@ export default function App() {
             </span>
           )}
         </div>
-        <div className="theme-switch" role="group" aria-label="Color theme">
+        <div id="help-display" tabIndex={-1} className="theme-switch" role="group" aria-label="Color theme">
           <button type="button" data-active={theme === 'neutral'} onClick={() => setTheme('neutral')}>Neutral</button>
           <button type="button" data-active={theme === 'warm'} onClick={() => setTheme('warm')}>Warm</button>
           <button type="button" data-active={theme === 'cool'} onClick={() => setTheme('cool')}>Cool</button>
@@ -164,7 +164,7 @@ export default function App() {
         </p>
       </div>
 
-      <p className="saved-workspace-link">
+      <p id="help-saved-link" tabIndex={-1} className="saved-workspace-link">
         <a href="/workspace" target="_blank" rel="noopener noreferrer">
           Open saved meeting workspace
         </a>{" "}
@@ -174,7 +174,7 @@ export default function App() {
       </p>
 
       {/* CONTROL PANEL */}
-      <div className="control-panel">
+      <div id="help-record" tabIndex={-1} className="control-panel">
         <label>Speech language <select disabled={busy} value={sourceLanguage} onChange={event => setSourceLanguage(event.target.value)}>
           {Object.entries({ auto: 'Detect automatically', en: 'English', es: 'Spanish', fr: 'French', de: 'German', pt: 'Portuguese', zh: 'Chinese', ja: 'Japanese', ko: 'Korean', hi: 'Hindi', ar: 'Arabic' }).map(([code, label]) => <option key={code} value={code}>{label}</option>)}
         </select></label>

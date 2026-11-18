@@ -19,7 +19,7 @@ export default function MeetingOutline({ state, onEdit }) {
     </form></details>}
     {state.nodes.some(item => item.parentId === node.id) && branch(node.id)}
   </li>)}</ul>;
-  return <details className="meeting-outline"><summary>Accessible outline and keyboard editing ({state.nodes.length} topics)</summary>
+  return <details id="help-outline" tabIndex={-1} className="meeting-outline"><summary>Accessible outline and keyboard editing ({state.nodes.length} topics)</summary>
     {error && <p role="alert">{error}</p>}
     {onEdit && <button type="button" onClick={() => apply(current => addNode(current, null, { label: 'New tree', summary: 'Add the subject of this tree.' }))}>Add independent tree</button>}
     {branch(null)}

@@ -17,3 +17,10 @@
 @media (max-width: 700px) { .help-topics { grid-template-columns: 1fr; } .workspace-help-body { padding: 0 16px 16px; } }
 
 .saved-shell .workspace-help > summary { padding: 15px 18px; }
+
+.help-jump-links { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 6px; }
+.help-jump-links a { padding: 7px 11px; border: 1px solid var(--color-border, #ccd7d5); border-radius: 8px; color: var(--color-text, #253b35); background: var(--color-bg-muted, #edf2f0); font-size: .88rem; text-underline-offset: 3px; }
+.help-jump-links a:hover { border-color: var(--color-primary, #137b67); }
+.help-jump-links a:focus-visible, [id^="help-"]:focus { outline: 3px solid var(--color-primary, #137b67); outline-offset: 4px; }
+[id^="help-"], #source-inspector { scroll-margin-top: 24px; }
+.help-unavailable { color: var(--color-text-muted, #566c66); font-size: .82rem; }

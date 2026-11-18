@@ -68,7 +68,7 @@ export default function MeetingView({
         </button>
       )}
       <div className="meeting-layout" ref={layoutRef}>
-        <div className="meeting-map-area">
+        <div id="help-map" tabIndex={-1} className="meeting-map-area">
             <div className="panel-heading"><div><span className="eyebrow">Explore ideas</span><h2>Mind map</h2></div>{mapTools}</div>
             {!nodes.length ? (
                 // empty map box (same size as the map) with the message centered inside
@@ -100,7 +100,7 @@ export default function MeetingView({
             }}
           />
         )}
-        <aside
+        <aside id="help-transcript" tabIndex={-1}
           className={'transcript-side' + (transcriptHidden ? ' collapsed' : '')}
           style={{ width: transcriptHidden ? undefined : transcriptWidth }}
         >
@@ -115,7 +115,7 @@ export default function MeetingView({
       <div className="meeting-result-cards">
         {/* End-of-meeting summary (appears after you stop recording, when the map has caught up) */}
         {!showSample && !hideSummary && (
-          <section aria-label="Meeting summary" className="meeting-summary" aria-live="polite">
+          <section aria-label="Meeting summary" id="help-summary" tabIndex={-1} className="meeting-summary" aria-live="polite">
             <h2>Meeting summary</h2>
             {summary.status === 'idle' ? <p className="summary-status">The highlights will appear here when recording finishes and your map is up to date.</p> : <button type="button" onClick={onRegenerateSummary} disabled={isRecording || pendingCount > 0 || summary.status === 'loading'}>Regenerate summary</button>}
             {summary.status === 'loading' && !summary.data && <p className="summary-status">Writing the summary…</p>}
@@ -139,7 +139,7 @@ export default function MeetingView({
             )}
           </section>
         )}
-        <section aria-label="Meeting action items" className="meeting-action-card">
+        <section aria-label="Meeting action items" id="help-tasks" tabIndex={-1} className="meeting-action-card">
           <h2>Meeting action items ({actionItems.length})</h2>
           {actionItems.length ? <ul className="action-items">{actionItems.map(item => <li key={item.id}>{item.text}{taskEvidence?.(item)}
             {onEdit && <details><summary>Edit task</summary><form key={item.text} onSubmit={event => { event.preventDefault(); const text = new FormData(event.currentTarget).get('task').trim(); if (text) onEdit(current => ({ ...current, actionItems: current.actionItems.map(task => task.id === item.id ? { ...task, text } : task) })); }}>

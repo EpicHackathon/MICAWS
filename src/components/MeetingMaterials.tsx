@@ -67,7 +67,7 @@ export default function MeetingMaterials({ materials = [], onChange }: Props) {
     input.current?.click();
   }
 
-  return <section aria-label="Supporting materials" className="meeting-materials">
+  return <section aria-label="Supporting materials" id="help-materials" tabIndex={-1} className="meeting-materials">
     <span className="eyebrow">Bring more context</span>
     <h2>Supporting materials</h2>
     <p>Give your meeting a head start with a document or slide deck.</p>

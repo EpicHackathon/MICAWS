@@ -145,7 +145,17 @@ test("saved workspace autosaves corrections and recovers an uncertain response a
     await act(async () => button("Open sample workspace").click());
     await waitFor(() => document.querySelector(".transcript-correction textarea"));
   }
+  await act(async () => root.render(React.createElement(Workspace)));
+  assert.equal(document.querySelector('.workspace-help a[href="#help-settings"]'), null,
+    'No broken settings link before opening a meeting');
   await connect();
+  await waitFor(() => document.querySelector('.workspace-help a[href="#help-settings"]'));
+  await act(async () => document.querySelector('.workspace-help a[href="#help-settings"]').click());
+  assert.equal(document.getElementById('help-settings').open, true);
+  assert.equal(document.activeElement.id, 'help-settings');
+  await act(async () => document.querySelector('.workspace-help a[href="#help-corrections"]').click());
+  assert.equal(document.querySelector('#help-corrections details').open, true);
+  assert.equal(attempts, 0, 'Help navigation does not save or submit forms');
   assert.match(document.body.textContent, /Saved review/);
   const correction = document.querySelector(".transcript-correction textarea");
   assert.ok(correction);

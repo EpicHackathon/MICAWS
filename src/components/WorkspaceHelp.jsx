@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import './workspaceHelp.css';
 
 const shared = [
@@ -28,14 +28,69 @@ const saved = [
   ['Export, disconnect, or delete', 'Export downloads meeting data as JSON, not the recording. Disconnect ends access in this page without deleting the saved meeting. Delete removes the meeting and schedules stored-recording cleanup; confirm only when you intend to remove it. Your organization controls retention and backups.'],
 ];
 
+const destinations = {
+  'Explore and edit the mind map': [['help-map', 'Mind map'], ['help-outline', 'Accessible outline']],
+  'Use the keyboard': [['help-outline', 'Accessible outline'], ['help-transcript', 'Transcript panel']],
+  'Start a meeting': [['help-record', 'Recording controls'], ['help-transcript', 'Transcript and typed input']],
+  'Understand the results': [['help-transcript', 'Transcript'], ['help-map', 'Mind map'], ['help-summary', 'Summary'], ['help-tasks', 'Action items']],
+  'Translate speech and results': [['help-record', 'Speech language'], ['help-transcript', 'Transcript translation'], ['help-map', 'Output language']],
+  'Add meeting materials': [['help-materials', 'Meeting materials']],
+  'Listen again and keep your audio': [['help-recording', 'Recording player']],
+  'When something fails': [['help-record', 'Recording status'], ['help-session', 'Processing status']],
+  'Adjust the display': [['help-display', 'Theme controls'], ['help-transcript', 'Transcript panel'], ['help-summary', 'Summary']],
+  'Local mode versus saved meetings': [['help-saved-link', 'Open saved workspace link']],
+  'Start here': [['help-connect', 'Connect'], ['help-library', 'Meeting library']],
+  'Save, finish, and reopen': [['help-meeting', 'Saving status and meeting controls']],
+  'Follow the evidence': [['help-highlights', 'Cited highlights'], ['source-inspector', 'Source passage']],
+  'Correct the transcript': [['help-corrections', 'Transcript corrections']],
+  'Search or ask a question': [['help-search', 'Search and ask']],
+  'Track decisions and tasks': [['help-decisions', 'Decisions'], ['help-progress', 'Task progress']],
+  'Connect related meetings': [['help-settings', 'Meeting settings'], ['help-history', 'Related history']],
+  'Languages and recordings': [['help-settings', 'Language settings'], ['source-inspector', 'Recording controls']],
+  'Recover after a connection problem': [['help-recovery', 'Pending change'], ['help-account', 'Connection controls']],
+  'Export, disconnect, or delete': [['help-meeting', 'Export and meeting controls'], ['help-account', 'Disconnect']],
+};
+
+export function jumpToHelpTarget(event, id) {
+  const target = document.getElementById(id);
+  if (!target) { event.preventDefault(); return; }
+  event.preventDefault();
+  // Reveal existing controls without submitting forms or changing meeting data.
+  for (let element = target; element; element = element.parentElement) {
+    if (element.tagName === 'DETAILS') element.open = true;
+  }
+  if (id === 'help-corrections') {
+    const passages = target.querySelector('details');
+    if (passages) passages.open = true;
+  }
+  const toggle = target.querySelector('.transcript-toggle[aria-expanded="false"]');
+  toggle?.click();
+  target.focus({ preventScroll: true });
+  target.scrollIntoView?.({ block: 'start', behavior: 'instant' });
+}
+
 export default function WorkspaceHelp({ mode = 'local', demo = false }) {
+  const [available, setAvailable] = useState('');
+  useEffect(() => {
+    const ids = [...new Set(Object.values(destinations).flat().map(([id]) => id))];
+    const update = () => setAvailable(ids.filter(id => document.getElementById(id)).join(' '));
+    update();
+    const observer = new MutationObserver(update);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
+  const active = new Set(available.split(' '));
   return <details className="workspace-help">
     <summary><span className="help-symbol" aria-hidden="true">?</span><span>How to use this workspace<span className="help-subtitle">Getting started, controls, and troubleshooting</span></span></summary>
     <div className="workspace-help-body">
       <p className="help-mode">{mode === 'saved' ? 'Saved meeting workspace' : 'Local recording workspace'}{demo ? ' · Synthetic demo' : ''}</p>
       {demo && <p className="help-notice"><strong>Trying the demo?</strong> Select Open sample workspace, then Launch planning. Try a source link, correct a passage, or update a task. Demo meetings disappear when the demo server stops. AI questions and translation are unavailable in mock mode.</p>}
-      <p>Open a topic below when you need it. You can close this guide without interrupting your meeting.</p>
-      <div className="help-topics">{[...(mode === 'saved' ? saved : local), ...shared].map(([title, text]) => <details key={title}><summary>{title}</summary><p>{text}</p></details>)}</div>
+      <p>Open a topic, then use its jump links to go straight to the controls. Collapsed sections open automatically and keyboard focus follows you. You can close this guide without interrupting your meeting.</p>
+      <div className="help-topics">{[...(mode === 'saved' ? saved : local), ...shared].map(([title, text]) => <details key={title}><summary>{title}</summary><p>{text}</p><div className="help-jump-links" aria-label={`${title}: jump to controls`}>
+        {(destinations[title] || []).map(([id, label]) => active.has(id)
+          ? <a key={id} href={`#${id}`} onClick={event => jumpToHelpTarget(event, id)}>{label}<span aria-hidden="true"> →</span></a>
+          : <span key={id} className="help-unavailable">{label} — {mode === 'saved' ? 'available when this control is shown for your session' : 'not currently available'}</span>)}
+      </div></details>)}</div>
     </div>
   </details>;
 }
