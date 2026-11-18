@@ -67,6 +67,9 @@ test('Gemini limit (429): waits longer, says so, then catches up with nothing lo
 
 test('while recording, AI calls are spaced out; lines wait and go together', async t => {
   const { render, seen } = await setup(t);
+  // A controlled clock keeps scheduler load from turning a 10ms wait into >120ms.
+  t.mock.timers.enable({ apis: ['Date', 'setTimeout'], now: 1_000_000 });
+  const advance = ms => act(async () => t.mock.timers.tick(ms));
   Object.assign(processorTiming, { minGapWhileRecording: 120 });
   const mock = createHandler({ env: { MEETING_MOCK: 'true' } });
   const bodies = [];
@@ -76,14 +79,14 @@ test('while recording, AI calls are spaced out; lines wait and go together', asy
   });
   const lines = [line(0, 'First point'), line(10, 'Second point'), line(20, 'Third point')];
   await render({ segments: lines.slice(0, 1), isRecording: true });
-  await sleep(20);
+  await advance(20);
   assert.equal(bodies.length, 1);                 // first call right away
   await render({ segments: lines.slice(0, 2), isRecording: true });
-  await sleep(10);
+  await advance(10);
   await render({ segments: lines, isRecording: true });
-  await sleep(10);
+  await advance(10);
   assert.equal(bodies.length, 1, 'too soon: waits for the gap');
-  await sleep(150);
+  await advance(150);
   assert.equal(bodies.length, 2);
   assert.equal(bodies[1].newSegments.length, 2, 'the two waiting lines went in ONE call');
   assert.equal(seen.pendingCount, 0);

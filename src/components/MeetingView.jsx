@@ -15,7 +15,7 @@ export default function MeetingView({
   state: liveState, onEdit: onLiveEdit, onEditingChange, pendingCount = 0,
   segments = [], isRecording = false, devMode = false, summary = { status: 'idle' },
   onSeek, translations, translationLanguage, onRegenerateSummary,
-  mapTools, transcriptTools,
+  mapTools, transcriptTools, hideSummary = false, onSelectNode, taskEvidence,
 }) {
   // Transcript side panel: width (drag the handle) and hide/show.
   const layoutRef = useRef(null);
@@ -77,7 +77,7 @@ export default function MeetingView({
                 </div>
             ) : (
                 <div className="mindmap-frame">
-                    <MindMap nodes={nodes} edges={edges} live={!showSample} onEdit={onEdit}
+                    <MindMap nodes={nodes} edges={edges} live={!showSample} onEdit={onEdit} onSelectNode={onSelectNode}
                       onEditingChange={showSample ? undefined : onEditingChange}
                       pendingCount={showSample ? 0 : pendingCount} />
                 </div>
@@ -114,7 +114,7 @@ export default function MeetingView({
       <MeetingOutline state={state} onEdit={onEdit}/>
       <div className="meeting-result-cards">
         {/* End-of-meeting summary (appears after you stop recording, when the map has caught up) */}
-        {!showSample && (
+        {!showSample && !hideSummary && (
           <section aria-label="Meeting summary" className="meeting-summary" aria-live="polite">
             <h2>Meeting summary</h2>
             {summary.status === 'idle' ? <p className="summary-status">The highlights will appear here when recording finishes and your map is up to date.</p> : <button type="button" onClick={onRegenerateSummary} disabled={isRecording || pendingCount > 0 || summary.status === 'loading'}>Regenerate summary</button>}
@@ -141,7 +141,7 @@ export default function MeetingView({
         )}
         <section aria-label="Meeting action items" className="meeting-action-card">
           <h2>Meeting action items ({actionItems.length})</h2>
-          {actionItems.length ? <ul className="action-items">{actionItems.map(item => <li key={item.id}>{item.text}
+          {actionItems.length ? <ul className="action-items">{actionItems.map(item => <li key={item.id}>{item.text}{taskEvidence?.(item)}
             {onEdit && <details><summary>Edit task</summary><form key={item.text} onSubmit={event => { event.preventDefault(); const text = new FormData(event.currentTarget).get('task').trim(); if (text) onEdit(current => ({ ...current, actionItems: current.actionItems.map(task => task.id === item.id ? { ...task, text } : task) })); }}>
               <label>Task text <input name="task" defaultValue={item.text} required/></label><button type="submit">Save task</button>
               <button type="button" onClick={() => onEdit(current => ({ ...current, actionItems: current.actionItems.filter(task => task.id !== item.id) }))}>Delete task</button>

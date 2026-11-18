@@ -1,5 +1,13 @@
 # MICAWS
 
+## Saved workspace and integration milestone
+
+MICAWS now includes an authenticated `/workspace` with PostgreSQL-backed saved meetings, autosaved transcript corrections and encrypted pending-change recovery, clickable transcript/recording evidence, cited meeting questions, decision/proposal/question tracking, task progress, related meeting history, and an embeddable partner workspace. This is a separate server-backed workflow; the original local microphone demo below remains unchanged.
+
+**Try it without keys:** run `npm.cmd ci`, `npm.cmd run build`, then `npm.cmd run demo:saved`. Open `http://127.0.0.1:8081/workspace` and select **Open sample workspace**. This synthetic demo is memory-only; real persistence requires PostgreSQL. Mock mode does not pretend to translate or answer AI questions.
+
+See [Saved workspace setup, API and operations](docs/SAVED_WORKSPACE.md) for persistent Docker setup, API keys/session tokens, partner embedding, privacy, recording storage, recovery, and validation limits. Existing Vercel-only hosting does not run the new database-backed worker; use the production Node container or equivalent customer infrastructure.
+
 MICAWS (Meeting Processor) turns live meeting audio into an editable mind map, action items, and an end-of-meeting summary.
 
 While recording, the browser captures microphone audio in 10-second chunks, sends them to a Python WhisperX transcription server, and streams new transcript segments to a mind-map API (Gemini or Ollama). The API returns the full updated meeting state — nodes, edges, action items — and the React UI renders it with [React Flow](https://reactflow.dev/).

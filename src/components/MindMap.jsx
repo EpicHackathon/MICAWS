@@ -478,6 +478,7 @@ export default function MindMap({
   function handleNodeClick(event, node) {
     const clicked = allNodes.find(n => n.id === node.id);
     if (editMode) { openEditor(clicked); return; }   // edit mode: click = open the edit panel
+    onSelectNode?.(clicked);
     // Micah's details panel still opens from the topic list view.
     // Main points ALWAYS open (even with no details yet: you still see their summary card).
     // Deeper boxes open when they have their own sub-details.
