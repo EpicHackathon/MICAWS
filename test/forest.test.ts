@@ -3,7 +3,7 @@ import test from 'node:test';
 import { addNode, moveNode, deleteNode } from '../src/shared/mapEdits.js';
 import { emptyMeetingState, meetingSchema } from '../src/shared/meetingSchema.js';
 import { arrangeForest } from '../src/shared/forestLayout.js';
-import { createHandler, preservesPrevious, mapCheck } from '../api/process.js';
+import { createHandler, preservesPrevious, mapCheck, restoreKeptTasks } from '../api/process.js';
 import { getDemoState } from '../src/shared/demo.js';
 
 const node = (id, parentId = null) => ({ id, parentId, label: id, summary: id, importance: parentId === null ? 5 : 3 });
@@ -59,4 +59,13 @@ test('provider receives document, language and manual deletion context during re
   assert.equal(response.status, 200);
   assert.equal(received.outputLanguage, 'Spanish');
   assert.equal(received.deletedNodes[0].id, 'gone');
+});
+
+test('a reworded or dropped task is put back instead of failing the whole update', () => {
+  const previous = [{ id: 'a', text: 'Read chapter 1' }, { id: 'b', text: 'Study for quiz' }];
+  const next = [{ id: 'a', text: 'Read chapter one and annotate' }, { id: 'c', text: 'Bring books' }];
+  assert.deepEqual(restoreKeptTasks(next, previous), [...previous, { id: 'c', text: 'Bring books' }]);
+  assert.deepEqual(restoreKeptTasks(next, previous, { deletedTaskIds: ['b'] }), [previous[0], { id: 'c', text: 'Bring books' }]);
+  // On reassessment only locked tasks are forced back; the AI may update the rest.
+  assert.deepEqual(restoreKeptTasks(next, previous, { reassessment: true, lockedTaskIds: ['b'] }), [previous[1], ...next]);
 });

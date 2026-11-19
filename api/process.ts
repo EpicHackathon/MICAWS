@@ -10,7 +10,7 @@ Maintain an evidence-grounded forest of meeting mind maps with up to five levels
 STRUCTURE AND BALANCE
 Each tree has a root with parentId null and importance 5. Every other node has importance 1–4 and exactly one existing parent. Edges mirror parents exactly with id "<parentId>-<childId>". No cycles, duplicates or orphans.
 Keep one tree for one coherent subject. Create another root for an independent meeting subject, or split a large coherent map into independently understandable major themes when the existing tree would exceed five levels. Never create trees solely to match a size quota. Preserve stable IDs when splitting or merging; a former root may become a child with importance 4. A single topic is correct when evidence only supports one.
-Add a sibling topic when new evidence concerns a distinct theme, even if only one fact supports it; never force unrelated details under the only existing topic. Update an existing node for the same fact. Create a subgroup only for two or more related details. Aim for at most four children per node when meaningful groupings exist, but do not invent categories, duplicate facts, or distort meaning for visual balance. Review mapCheck coverage against historicalContext and newSegments. Empty branches and unequal sizes are acceptable when evidence warrants them.
+Add a sibling topic when new evidence concerns a distinct theme, even if only one fact supports it; never force unrelated details under the only existing topic. Update an existing node only when new speech restates the same fact. DETAILS: a main point (child of a root) is a short overview; the specific facts said about it (who, what, when, numbers, examples, reasons, decisions) belong in its detail children (importance 1-2), one fact per detail. When speech adds a specific fact to an existing main point, add a detail child instead of only lengthening the main point's summary. Aim for 1-3 details under each main point that the transcript says anything specific about; mapCheck.mainPointsWithoutDetails lists main points to check first. Group three or more related details under a subtopic. Aim for at most four children per node when meaningful groupings exist, but do not invent categories, facts, or details, duplicate facts, or distort meaning for visual balance. Review mapCheck coverage against historicalContext and newSegments. A main point mentioned only once in passing may have no details, and unequal sizes are acceptable when evidence warrants them.
 Summaries must be complete, concise factual sentences. Root titles name their tree's subject. Merge genuinely overlapping AI-created nodes without losing their supported facts. Retain stable IDs of retained nodes and update canonical edges after moves.
 
 MANUAL EDITS AND REASSESSMENT
@@ -62,6 +62,18 @@ export function preservesPrevious(next: MeetingState, previous: MeetingState, lo
   const kept = previous.nodes.filter(node => nodes.has(node.id)).length;
   const notWiped = previous.nodes.length < 6 || kept >= Math.ceil(previous.nodes.length * 2 / 3);
   return keptInPlace && (reassessment || notWiped) && previous.actionItems.filter(task => !reassessment || lockedTaskIds.includes(task.id)).every(task => tasks.get(task.id) === task.text);
+}
+
+// Tasks the AI must keep (all of them normally; only locked ones on reassessment) come back with
+// their previous text, in their previous order; the AI's new tasks follow.
+export function restoreKeptTasks(
+  next: MeetingState['actionItems'],
+  previous: MeetingState['actionItems'],
+  { reassessment = false, lockedTaskIds = [], deletedTaskIds = [] }: { reassessment?: boolean; lockedTaskIds?: string[]; deletedTaskIds?: string[] } = {},
+) {
+  const kept = previous.filter(task => !deletedTaskIds.includes(task.id) && (!reassessment || lockedTaskIds.includes(task.id)));
+  const keptIds = new Set(kept.map(task => task.id));
+  return [...kept, ...next.filter(task => !keptIds.has(task.id))];
 }
 
 // Structural hints for reviewing main-point coverage; evidence still determines whether to add nodes.
@@ -161,6 +173,10 @@ export function createHandler({ env = process.env, generateText = generate } = {
       })));
       return error(502, 'The update failed meeting-state validation. Retry this batch.');
     }
+
+    // The AI sometimes rewords or drops a task it was told to keep. Put the kept tasks back
+    // instead of throwing away the whole map update (that made updates fail and retry).
+    result.data.actionItems = restoreKeptTasks(result.data.actionItems, previousState.actionItems, parsed.data);
 
     if (!preservesPrevious(result.data, previousState, lockedIds, parsed.data)) {
       const root = previousState.nodes.find(node => node.parentId === null);
