@@ -10,7 +10,7 @@ services:
     volumes:
       - ./src:/app/src
       - ./index.html:/app/index.html:ro
-      - ./vite.config.js:/app/vite.config.js:ro
+      - ./vite.config.ts:/app/vite.config.ts:ro
     environment:
       - CHOKIDAR_USEPOLLING=true
       - TRANSCRIPTION_URL=http://transcription:8000
@@ -31,7 +31,7 @@ services:
       context: .
       dockerfile: Dockerfile.diart
     volumes:
-      - ./backend/diart:/app/diart_service
+      - ./transcription/diart:/app/diart_service
       - ./audio:/app/audio
       - huggingface-cache:/root/.cache/huggingface
     environment:

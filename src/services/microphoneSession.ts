@@ -7,7 +7,7 @@ type MicrophoneSessionOptions = {
   onStatus: (status: MicrophoneStatus) => void;
   onError: (message: string | null) => void;
   onAudioChunk?: (samples: Float32Array, rate: number, start: number) => boolean | void;
-  onCaptureDone?: () => void; language?: string; startSeconds?: number; retryDelays?: number[];
+  onCaptureDone?: () => void; workletUrl: string; language?: string; startSeconds?: number; retryDelays?: number[];
 };
 import { encodeWav } from '../audio/encodeWav.js';
 import { transcribeAudio } from './transcribeAudio.js';
@@ -22,12 +22,13 @@ export class MicrophoneSession {
   onError: (message: string | null) => void;
   onAudioChunk?: (samples: Float32Array, rate: number, start: number) => boolean | void;
   onCaptureDone?: () => void;
+  workletUrl: string;
   language: string; startSeconds: number; id: string; controller: AbortController;
   queue: AudioQueueItem[]; cancelled: boolean; stopping: boolean; captureDone: boolean;
   processing: boolean; failed: boolean;
   context?: AudioContext; stream?: MediaStream; source?: MediaStreamAudioSourceNode; node?: AudioWorkletNode;
   retryTimer?: ReturnType<typeof setTimeout>; stopTimer?: ReturnType<typeof setTimeout>;
-  constructor({ onTranscript, onStatus, onError, onAudioChunk, onCaptureDone, language = 'auto', startSeconds = 0, retryDelays = RETRY_DELAYS_MS }: MicrophoneSessionOptions) {
+  constructor({ onTranscript, onStatus, onError, onAudioChunk, onCaptureDone, workletUrl, language = 'auto', startSeconds = 0, retryDelays = RETRY_DELAYS_MS }: MicrophoneSessionOptions) {
     this.retryDelays = retryDelays;
     this.failures = 0;   // failures in a row (resets after a chunk works)
     this.onTranscript = onTranscript;
@@ -35,6 +36,7 @@ export class MicrophoneSession {
     this.onError = onError;
     this.onAudioChunk = onAudioChunk;
     this.onCaptureDone = onCaptureDone;
+    this.workletUrl = workletUrl;
     this.language = language;
     this.startSeconds = startSeconds;
     this.id = crypto.randomUUID();
@@ -60,7 +62,7 @@ export class MicrophoneSession {
       if (this.cancelled) return;
       this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       if (this.cancelled) { this.release(); return; }
-      await this.context.audioWorklet.addModule(new URL('../audio/chunk-processor.js', import.meta.url));
+      await this.context.audioWorklet.addModule(this.workletUrl);
       if (this.cancelled) return;
       this.source = this.context.createMediaStreamSource(this.stream);
       this.node = new AudioWorkletNode(this.context, 'microphone-chunks', {

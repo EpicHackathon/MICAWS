@@ -1,7 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
-import SavedWorkspace from './components/SavedWorkspace.jsx';
+import SavedWorkspace from './components/SavedWorkspace.tsx';
 import './styles.css';
 import './workspace.css';
 

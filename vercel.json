@@ -1,1 +1,1 @@
-{"framework":"vite","functions":{"api/process.js":{"maxDuration":60}}}
+{"framework":"vite","functions":{"api/process.ts":{"maxDuration":60}}}

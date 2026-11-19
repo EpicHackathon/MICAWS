@@ -8,16 +8,16 @@ The browser uses AudioWorklet to capture continuously and make a separate comple
 
 ## Files changed for live transcription
 
-- `src/audio/chunk-processor.js`: collects mono samples; emits a chunk every 10 seconds and flushes remaining samples on Stop.
-- `src/audio/encodeWav.js`: turns a sample array and sample rate into a complete mono, 16-bit WAV Blob.
-- `src/services/microphoneSession.js`: opens the microphone, manages audio capture and the upload queue, retains failed chunks for retry, and releases microphone resources.
-- `src/services/transcribeAudio.js`: accepts `(audioBlob, abortSignal, { chunkId, startSeconds })`, uploads multipart audio, and returns the validated list of transcript segments.
-- `src/hooks/useMicrophone.js`: exposes `start(startSeconds)`, `stop()`, `retry()`, `reset()`, `status`, and `error` to React. Calls `onTranscript(segments, chunkEndSeconds)` after each successful chunk, including silent chunks with an empty list.
-- `src/hooks/useMeetingProcessor.js`: processes new transcript entries as they arrive, drains entries received during an active map request, and retries on a 10-second timer while recording.
-- `src/App.jsx`: appends absolute transcript timestamps and connects audio retry to the existing Process pending / retry button.
-- `test/microphone.test.js`: regression coverage for chunk boundaries, WAV encoding, ordering, silence, retry, reset cancellation, and Stop.
+- `src/audio/chunk-processor.ts`: collects mono samples; emits a chunk every 10 seconds and flushes remaining samples on Stop.
+- `src/audio/encodeWav.ts`: turns a sample array and sample rate into a complete mono, 16-bit WAV Blob.
+- `src/services/microphoneSession.ts`: opens the microphone, manages audio capture and the upload queue, retains failed chunks for retry, and releases microphone resources.
+- `src/services/transcribeAudio.ts`: accepts `(audioBlob, abortSignal, { chunkId, startSeconds })`, uploads multipart audio, and returns the validated list of transcript segments.
+- `src/hooks/useMicrophone.ts`: exposes `start(startSeconds)`, `stop()`, `retry()`, `reset()`, `status`, and `error` to React. Calls `onTranscript(segments, chunkEndSeconds)` after each successful chunk, including silent chunks with an empty list.
+- `src/hooks/useMeetingProcessor.ts`: processes new transcript entries as they arrive, drains entries received during an active map request, and retries on a 10-second timer while recording.
+- `src/App.tsx`: appends absolute transcript timestamps and connects audio retry to the existing Process pending / retry button.
+- `test/microphone.test.ts`: regression coverage for chunk boundaries, WAV encoding, ordering, silence, retry, reset cancellation, and Stop.
 
-No new npm or Python dependencies are required. The existing `backend/main.py` and `backend/whisperx/transcription.py` already support chunk IDs and start-time offsets.
+No new npm or Python dependencies are required. The existing `transcription/main.py` and `transcription/whisperx/transcription.py` already support chunk IDs and start-time offsets.
 
 ## Try the updated version on macOS
 
@@ -27,7 +27,7 @@ Terminal 1:
 
 ```bash
 source .venv/bin/activate
-python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
+python -m uvicorn transcription.main:app --host 127.0.0.1 --port 8000
 ```
 
 Terminal 2:
@@ -36,7 +36,7 @@ Terminal 2:
 npm run dev
 ```
 
-If you extracted the full project into a new folder, first create its environment with `python3.11 -m venv .venv`, activate it, install `python -m pip install -r backend/requirements.txt`, and run `npm ci`. FFmpeg must be installed separately, as before.
+If you extracted the full project into a new folder, first create its environment with `python3.11 -m venv .venv`, activate it, install `python -m pip install -r transcription/requirements.txt`, and run `npm ci`. FFmpeg must be installed separately, as before.
 
 For your own speech to change the map, your existing `.env.local` needs `MEETING_MOCK=false` and a valid `GEMINI_API_KEY`. Restart Vite after changing this file. Mock mode only responds to the included sample phrases; it can display real transcripts without building a map from them.
 
@@ -66,7 +66,7 @@ First-time setup:
 
 ```powershell
 py -3.11 -m venv .venv-whisperx
-.\.venv-whisperx\Scripts\python.exe -m pip install -r backend/requirements.txt
+.\.venv-whisperx\Scripts\python.exe -m pip install -r transcription/requirements.txt
 winget install --id Gyan.FFmpeg --exact
 ```
 

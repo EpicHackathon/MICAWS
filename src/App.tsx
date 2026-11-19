@@ -1,4 +1,5 @@
-import WorkspaceHelp from './components/WorkspaceHelp.jsx';
+import workletUrl from './audio/chunk-processor.ts?worker&url';
+import WorkspaceHelp from './components/WorkspaceHelp.tsx';
 import { useMicrophone } from './hooks/useMicrophone.js';
 import React, { useState, useRef, useEffect } from 'react';
 import type { TranscriptSegment } from './components/meetingTypes';
@@ -6,12 +7,12 @@ import type { MeetingMaterial } from './services/meetingMaterials';
 import { useMeetingProcessor } from './hooks/useMeetingProcessor.js';
 import { useMeetingSummary } from './hooks/useMeetingSummary.js';
 import MeetingView from './components/MeetingView';
-import MicIcon from './components/MicIcon.jsx';
-import StopIcon from './components/StopIcon.jsx';
-import ManualInput from './components/ManualInput.jsx';
+import MicIcon from './components/MicIcon.tsx';
+import StopIcon from './components/StopIcon.tsx';
+import ManualInput from './components/ManualInput.tsx';
 import { demoBatches } from './shared/demo.js';
-import MeetingMaterials from './components/MeetingMaterials.jsx';
-import RecordingPlayer from './components/RecordingPlayer.jsx';
+import MeetingMaterials from './components/MeetingMaterials.tsx';
+import RecordingPlayer from './components/RecordingPlayer.tsx';
 import { useTranslations } from './hooks/useTranslations.js';
 
 type ResultsProps = {
@@ -116,7 +117,7 @@ export default function App() {
       speaker: segment.speaker,
       text: segment.text,
     }))]);
-  }, { language: sourceLanguage });
+  }, { language: sourceLanguage, workletUrl });
   const isRecording = microphone.status === 'recording';
   const busy = microphone.status !== 'idle';
   const startRecording = () => microphone.start(Math.max(nextStart.current, segments.at(-1)?.time ?? 0));

@@ -3,10 +3,10 @@ import type { MeetingState } from '../shared/meetingSchema';
 import type { MeetingSummary } from '../shared/summarySchema';
 import type { MeetingEditHandler, TranscriptSegment } from './meetingTypes';
 import MindMap from './MindMap';
-import TranscriptPanel from './TranscriptPanel.jsx';
+import TranscriptPanel from './TranscriptPanel.tsx';
 import { mockMeeting } from '../shared/mockMeeting.js';
 import './meetingLayout.css';
-import MeetingOutline from './MeetingOutline.jsx';
+import MeetingOutline from './MeetingOutline.tsx';
 
 const MIN_TRANSCRIPT = 220;
 const MAX_TRANSCRIPT = 640;
