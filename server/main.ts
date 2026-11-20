@@ -4,7 +4,7 @@ import { MeetingStore } from "./store.js";
 import { createAuth } from "./auth.js";
 import { createProvider } from "./provider.js";
 import { objectStorage } from "./objects.js";
-import { createHttpHandler } from "./http.js";
+import { createApp } from "./http.js";
 
 const env = process.env;
 if (!env.DATABASE_URL) throw new Error("DATABASE_URL is required.");
@@ -24,7 +24,7 @@ let stopping = false;
 let server: http.Server | undefined;
 if (mode !== "worker") {
   server = http.createServer(
-    createHttpHandler({ store, auth: createAuth(env), provider, objects, env }),
+    createApp({ store, auth: createAuth(env), provider, objects, env }),
   );
   server.requestTimeout = 130000;
   server.headersTimeout = 15000;

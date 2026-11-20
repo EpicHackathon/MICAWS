@@ -5,7 +5,7 @@ import { newDb } from "pg-mem";
 import { MeetingStore, type MeetingJob } from "../server/store.js";
 import { createAuth } from "../server/auth.js";
 import { createProvider } from "../server/provider.js";
-import { createHttpHandler } from "../server/http.js";
+import { createApp } from "../server/http.js";
 
 const port = Number(process.env.DEMO_PORT) || 8081;
 const env = {
@@ -111,7 +111,7 @@ await store.command("demo", previous.id, 0, {
     citations: [],
   },
 });
-const handler = createHttpHandler({
+const app = createApp({
   store,
   auth,
   provider,
@@ -134,7 +134,7 @@ const server = http.createServer((req, res) => {
       ),
     );
   }
-  return handler(req, res);
+  return app(req, res);
 });
 let running = false;
 const timer = setInterval(async () => {

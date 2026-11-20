@@ -11,7 +11,7 @@ import {
 } from "../src/shared/savedMeeting.js";
 import { MeetingStore } from "../server/store.js";
 import { createAuth, authorize } from "../server/auth.js";
-import { createHttpHandler } from "../server/http.js";
+import { createApp } from "../server/http.js";
 import { createProvider, validateIntelligence } from "../server/provider.js";
 import { createMicawsClient } from "../sdk/client.js";
 import { draftVault } from "../src/services/recoveryDraft.js";
@@ -352,7 +352,7 @@ test("authenticated HTTP integration covers create, corrected ingest, readonly a
   const store = await fixture(t);
   const auth = createAuth(env);
   const server = http.createServer(
-    createHttpHandler({
+    createApp({
       store,
       auth,
       provider: createProvider(env),
@@ -374,6 +374,32 @@ test("authenticated HTTP integration covers create, corrected ingest, readonly a
     command([segment("s1", 2, "We agreed on Monday.")]),
   );
   assert.equal((await client.search(m.id, "Monday")).length, 1);
+  const preflight = await fetch(`${baseUrl}/api/v1/meetings/${m.id}/commands`, {
+    method: "OPTIONS",
+    headers: { Origin: env.EMBED_ORIGINS },
+  });
+  assert.equal(preflight.status, 204);
+  assert.equal(preflight.headers.get("access-control-allow-origin"), env.EMBED_ORIGINS);
+
+  const events = await fetch(`${baseUrl}/api/v1/meetings/${m.id}/events`, {
+    headers: { Authorization: `Bearer ${session.token}` },
+    signal: AbortSignal.timeout(5000),
+  });
+  assert.equal(events.status, 200);
+  assert.match(events.headers.get("content-type"), /^text\/event-stream/);
+  const reader = events.body.getReader();
+  const decoder = new TextDecoder();
+  let data = "";
+  try {
+    while (!data.includes(`data: {"revision":${m.revision}}\n\n`)) {
+      const { done, value } = await reader.read();
+      assert.equal(done, false, "Stream closed before sending the current revision");
+      data += decoder.decode(value, { stream: true });
+    }
+  } finally {
+    await reader.cancel();
+  }
+
   await assert.rejects(client.list(), { status: 403 });
   const viewer = createMicawsClient({
     baseUrl,

@@ -69,13 +69,15 @@ Wait for **Application startup complete**, then allow microphone access in the l
 | --- | --- |
 | [`src/`](src/) | React 19 and TypeScript UI, React Flow and Dagre mind maps, browser audio, and shared Zod schemas |
 | [`api/`](api/) | Live endpoints for mind-map updates, summaries, and translation using Gemini or Ollama |
-| [`server/`](server/) | Node.js and TypeScript saved-meeting API, background worker, PostgreSQL schema, and optional S3-compatible recording storage |
+| [`server/`](server/) | Node.js, Express, and TypeScript saved-meeting API, background worker, PostgreSQL schema, and optional S3-compatible recording storage |
 | [`transcription/`](transcription/) | Python FastAPI and WhisperX transcription service, plus optional Diart tooling |
 | [`sdk/`](sdk/) | TypeScript client and iframe embedding helper for partner applications |
 | [`scripts/`](scripts/) | Saved-workspace demo and Windows transcription launcher |
 | [`test/`](test/) | Node and Python tests for the UI, audio processing, APIs, and saved meetings |
 
 ## Persistent setup and deployment
+
+The React saved workspace and partner SDK call Express routes under `/api/v1`. The server uses the `pg` driver to access PostgreSQL.
 
 The saved workspace can run with PostgreSQL using Docker Compose or a separately managed database. Start with [`pilot.env.example`](pilot.env.example) and follow the [saved-workspace guide](docs/SAVED_WORKSPACE.md) for configuration, authentication, recording storage, and partner embedding. [Docker Compose configuration](compose.pilot.yaml)
 
