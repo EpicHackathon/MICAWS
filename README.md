@@ -26,7 +26,7 @@ npm run build
 npm run demo:saved
 ```
 
-Open <http://127.0.0.1:8081/workspace>, select **Open sample workspace**, and open **Launch planning**. Try correcting a transcript passage, following a source link, or changing a task’s progress.
+Open <http://127.0.0.1:8081/workspace>, select **Open sample workspace**, and open **Launch planning**. Use <http://127.0.0.1:8081/?dev> to try the live workspace on the same server. Try correcting a transcript passage, following a source link, or changing a task’s progress.
 
 The demo uses synthetic data and in-memory storage. You can run it without a microphone, API keys, or a PostgreSQL server. Changes disappear when you stop the demo.
 
@@ -77,7 +77,9 @@ Wait for **Application startup complete**, then allow microphone access in the l
 
 ## Persistent setup and deployment
 
-The React saved workspace and partner SDK call Express routes under `/api/v1`. The server uses the `pg` driver to access PostgreSQL.
+Express serves the React build and saved API. The Node backend uses the `pg` driver to access PostgreSQL. The live routes also run in Express during Vite development.
+
+For self-hosting both screens at one address, set `ENABLE_LIVE_WORKSPACE=true` and point `TRANSCRIPTION_URL` at a reachable WhisperX service. Enable the live routes on a trusted network or behind access controls because they accept requests without a saved-workspace session.
 
 The saved workspace can run with PostgreSQL using Docker Compose or a separately managed database. Start with [`pilot.env.example`](pilot.env.example) and follow the [saved-workspace guide](docs/SAVED_WORKSPACE.md) for configuration, authentication, recording storage, and partner embedding. [Docker Compose configuration](compose.pilot.yaml)
 

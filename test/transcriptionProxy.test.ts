@@ -27,7 +27,6 @@ test('Vite reads the transcription target from .env.local and proxies requests a
     await writeFile(join(directory, '.env.local'), 'TRANSCRIPTION_URL=' + target);
     process.chdir(directory);
     const settings = config({ mode: 'development' });
-    assert.equal(settings.server.proxy['/api/transcribe'].target, target);
     frontend = await createServer({
       ...settings, configFile: false, root: previousDirectory,
       server: { ...settings.server, host: '127.0.0.1', port: 0, ws: false },

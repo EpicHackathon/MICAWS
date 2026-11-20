@@ -1,6 +1,6 @@
 # Saved meetings and partner integration
 
-This milestone adds a separate authenticated workspace at `/workspace`. The existing `npm run dev` microphone demo remains available at `/`; it does **not** acquire persistence automatically. The production Node server redirects `/` to `/workspace` and does not expose the old unauthenticated AI endpoints.
+This milestone adds a separate authenticated workspace at `/workspace`. The existing `npm run dev` microphone demo remains available at `/`; it does **not** acquire persistence automatically. By default, the self-hosted Express server redirects `/` to `/workspace`. The sample server serves the live workspace at `/` and the saved workspace at `/workspace` on port 8081.
 
 ## Try the interface without keys or infrastructure
 
@@ -33,6 +33,8 @@ docker compose --env-file .env.pilot -f compose.pilot.yaml up --build -d
 Open `http://localhost:8080/workspace`. The production container includes the API, bounded worker pool, built React assets, and private PostgreSQL connection. The database has a persistent Docker volume. Neither PostgreSQL nor a model server is published by this Compose file.
 
 Without Docker, configure `DATABASE_URL`, load the other settings into the process environment, run `npm run build`, then `node --env-file=.env.pilot --import tsx server/main.ts`. Use `node --env-file=.env.pilot --import tsx server/main.ts api` and `node --env-file=.env.pilot --import tsx server/main.ts worker` for separate processes; each applies the initial idempotent schema. Worker concurrency defaults to two, configurable up to ten.
+
+To serve both screens from the self-hosted Express server, set `ENABLE_LIVE_WORKSPACE=true` in the server environment. It serves the live UI at `/`, the saved UI at `/workspace`, and proxies transcription to `TRANSCRIPTION_URL` (defaults to `http://127.0.0.1:8000` from the server). Set a reachable internal URL when Express runs in Docker. Enable these live routes only on a trusted network or behind access controls. Requests to the live routes do not require a saved-workspace session and use the configured live AI provider directly.
 
 For local UI development, run the saved API on port 8080 and Vite separately; `/workspace` uses Vite's `/api/v1` proxy. Add the Vite origin to `EMBED_ORIGINS` for development. `SAVED_API_URL` can override the proxy target. Do not refresh or replace an existing microphone-demo page with pending audio.
 

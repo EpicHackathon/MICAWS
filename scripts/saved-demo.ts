@@ -10,6 +10,8 @@ import { createApp } from "../server/http.js";
 const port = Number(process.env.DEMO_PORT) || 8081;
 const env = {
   AI_PROVIDER: "mock",
+  ENABLE_LIVE_WORKSPACE: "true",
+  TRANSCRIPTION_URL: process.env.TRANSCRIPTION_URL,
   APP_ORIGIN: `http://127.0.0.1:${port}`,
   BRAND_NAME: "MICAWS · Demo",
   SAVED_DEMO: "true",
@@ -117,25 +119,9 @@ const app = createApp({
   provider,
   objects: null,
   env,
+  demoSession: () => auth.issue({ org: "demo", service: true }, { role: "editor" }),
 });
-const server = http.createServer((req, res) => {
-  if (req.url === "/api/v1/demo-session" && req.method === "GET") {
-    if (req.headers.origin && req.headers.origin !== env.APP_ORIGIN) {
-      res.writeHead(403);
-      return res.end();
-    }
-    res.writeHead(200, {
-      "Content-Type": "application/json",
-      "Cache-Control": "no-store",
-    });
-    return res.end(
-      JSON.stringify(
-        auth.issue({ org: "demo", service: true }, { role: "editor" }),
-      ),
-    );
-  }
-  return app(req, res);
-});
+const server = http.createServer(app);
 let running = false;
 const timer = setInterval(async () => {
   if (running) return;

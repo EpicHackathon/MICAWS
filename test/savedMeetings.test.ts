@@ -2,6 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
 import { randomUUID } from "node:crypto";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { newDb } from "pg-mem";
 import pg from "pg";
 import {
@@ -425,6 +428,43 @@ test("authenticated HTTP integration covers create, corrected ingest, readonly a
   assert.equal(second.series, m.series);
   await client.remove(m.id);
   await assert.rejects(client.get(m.id), { status: 404 });
+});
+
+test("combined Express mode serves both workspaces and keeps saved routes authenticated", async (t) => {
+  const store = await fixture(t);
+  const staticDir = await mkdtemp(join(tmpdir(), "micaws-express-"));
+  t.after(() => rm(staticDir, { recursive: true, force: true }));
+  await writeFile(join(staticDir, "index.html"), '<div id="root"></div>');
+  const server = http.createServer(createApp({
+    store,
+    auth: createAuth(env),
+    provider: createProvider(env),
+    objects: null,
+    env: { ...env, ENABLE_LIVE_WORKSPACE: "true" },
+    staticDir,
+  }));
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  for (const path of ["/", "/workspace"]) {
+    const page = await fetch(baseUrl + path, { redirect: "manual" });
+    assert.equal(page.status, 200);
+    assert.match(await page.text(), /id="root"/);
+  }
+  const summaryRequest = {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ segments: [], state }),
+  };
+  const summary = await fetch(baseUrl + "/api/summary", summaryRequest);
+  assert.equal(summary.status, 200);
+  assert.match((await summary.json()).overview, /Launch/);
+  const embedded = await fetch(baseUrl + "/api/summary", {
+    ...summaryRequest,
+    headers: { ...summaryRequest.headers, Origin: env.EMBED_ORIGINS },
+  });
+  assert.equal(embedded.status, 403);
+  assert.equal((await fetch(baseUrl + "/api/v1/meetings")).status, 401);
 });
 
 test(
