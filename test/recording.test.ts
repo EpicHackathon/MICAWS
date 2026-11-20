@@ -2,10 +2,34 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { JSDOM } from 'jsdom';
 import React, { act } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import TranscriptPanel from '../src/components/TranscriptPanel.tsx';
 import { createServer } from 'vite';
 import { createHandler } from '../api/process.js';
 import { createSummaryHandler } from '../api/summary.js';
 import { installAudioMocks } from './helpers/audio.js';
+
+test('live caption display joins short fragments while keeping row timestamps and translations', () => {
+  const segments = [
+    [0, 'This is'], [1, 'one sentence.'], [2, 'Then'],
+    [4, 'we'], [6, 'keep'], [8, 'talking'], [10, 'without'], [12, 'a break'],
+    [16, 'after a pause'],
+  ].map(([time, text]) => ({ time, text, speaker: null }));
+  const render = groupTranscript => new JSDOM(renderToStaticMarkup(React.createElement(TranscriptPanel, {
+    segments, groupTranscript, translations: ['Ceci est', 'une phrase.'],
+    draftCaption: 'draft now', onSeek() {},
+  }))).window.document;
+  const grouped = render(true);
+  const lines = [...grouped.querySelectorAll('.transcript-line:not(.transcript-draft)')];
+  assert.equal(lines.length, 4);
+  assert.match(lines[0].textContent, /This is one sentence/);
+  assert.match(lines[0].textContent, /Translation: Ceci est une phrase/);
+  assert.match(lines[1].textContent, /Then we keep talking without/);
+  assert.match(lines[2].textContent, /0:12.*a break/);
+  assert.match(lines[3].textContent, /0:16.*after a pause/);
+  assert.match(grouped.querySelector('.transcript-draft').textContent, /draft now/);
+  assert.equal(render(false).querySelectorAll('.transcript-line:not(.transcript-draft)').length, segments.length);
+});
 
 test('recording hook and App handle permissions, transcription retries, processing retries and reset', async t => {
   const dom = new JSDOM('<div id="root"></div>', { url: 'http://localhost/' });

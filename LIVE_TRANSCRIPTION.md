@@ -98,7 +98,9 @@ If the backend is unavailable or still loading, the frontend returns an explicit
    a late response cannot bring back draft or final text.
 
 The experimental mode finalizes older audio as windows advance and flushes the
-last draft after queued audio finishes. It stops capture if six requests queue up,
+last draft after queued audio finishes. The transcript groups finalized fragments into
+one row per sentence or about ten seconds of continuous speech. Each row links
+to its first timestamp. It stops capture if six requests queue up,
 then drains those requests. Repeated words and short utterances are useful
 comparison cases because overlapping-window reconciliation uses a timing heuristic.
 Standard mode remains the default.

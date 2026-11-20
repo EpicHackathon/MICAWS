@@ -18,6 +18,7 @@ import { useTranslations } from './hooks/useTranslations.js';
 type ResultsProps = {
   segments: TranscriptSegment[];
   draftCaption?: string;
+  groupTranscript?: boolean;
   alignedWordCount?: number;
   isRecording: boolean;
   clearTranscript: () => boolean;
@@ -38,7 +39,7 @@ const languages = ['English', 'Spanish', 'French', 'German', 'Portuguese', 'Chin
  * MeetingResults component displays the derived state (Nodes, Edges, Actions) 
  * and controls for processing segments. It is now purely a display layer.
  */
-export function MeetingResults({ segments, draftCaption, alignedWordCount, isRecording, clearTranscript, onManualSegment, captureBusy, devMode = false, children, onSeek, translations, translationLanguage, transcriptTools, recordingPlayer }: ResultsProps) {
+export function MeetingResults({ segments, draftCaption, groupTranscript, alignedWordCount, isRecording, clearTranscript, onManualSegment, captureBusy, devMode = false, children, onSeek, translations, translationLanguage, transcriptTools, recordingPlayer }: ResultsProps) {
   // The hook handles state updates based on incoming segments
   const [viewVersion, setViewVersion] = useState(0);
   // True while someone edits the live mind map: AI map updates wait, recording continues.
@@ -77,7 +78,7 @@ export function MeetingResults({ segments, draftCaption, alignedWordCount, isRec
         onEditingChange={setEditingMap}
         pendingCount={processor.pendingCount}
         segments={segments}
-        draftCaption={draftCaption}
+        draftCaption={draftCaption} groupTranscript={groupTranscript}
         alignedWordCount={alignedWordCount}
         isRecording={isRecording}
         devMode={devMode}
@@ -205,6 +206,7 @@ export default function App() {
       <MeetingResults 
         segments={segments}
         draftCaption={microphone.draftCaption}
+        groupTranscript={captionMode}
         alignedWordCount={microphone.wordSpans.length}
         isRecording={isRecording} 
         clearTranscript={clearSession}
