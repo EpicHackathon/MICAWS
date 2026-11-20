@@ -8,6 +8,10 @@ body { background-image: radial-gradient(ellipse at 15% 0%, var(--color-accent-s
 .brand-caption { margin-left: 8px; padding-left: 20px; border-left: 1px solid var(--color-border); font-size: 12px; font-weight: 400; letter-spacing: 0; color: var(--color-text-muted); }
 .theme-switch { margin: 0; padding: 4px; background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: 10px; }
 .theme-switch button { border-radius: 7px; padding: 5px 10px; font-size: 12px; }
+[data-theme="cool"] .theme-switch button[data-active="true"] {
+  background: var(--color-btn-secondary);
+  color: var(--color-btn-secondary-text);
+}
 .workspace-intro { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin: 32px 0 24px; scroll-margin-top: 20px; }
 .workspace-intro h1 { font-size: clamp(26px, 3vw, 36px); letter-spacing: -1.2px; line-height: 1.25; margin: 5px 0 10px; }
 .workspace-intro p { color: var(--color-text-muted); font-size: 14px; }
