@@ -54,6 +54,7 @@ export default function SavedWorkspace() {
   const vault = useRef<Awaited<ReturnType<typeof draftVault>> | null>(null);
   const active = useRef<string | null>(null);
   const generation = useRef(0);
+  const displayedMeeting = useRef(meeting);
   const savingRef = useRef(false);
   const client = React.useMemo(() => createMicawsClient({ token }), [token]);
   const editable = session?.role === "editor";
@@ -166,19 +167,60 @@ export default function SavedWorkspace() {
     };
   }, [client]);
   useEffect(() => {
+    displayedMeeting.current = meeting;
+  }, [meeting]);
+
+  useEffect(() => {
     if (!meeting || !session) return;
     const id = meeting.id;
+    const version = generation.current;
     const controller = new AbortController();
-    client.watch(
+    let loadedRevision = meeting.revision;
+    let wantedRevision = loadedRevision;
+    let refreshing = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const isCurrent = () =>
+      !controller.signal.aborted && active.current === id && generation.current === version;
+    const knownRevision = () => Math.max(
+      loadedRevision,
+      displayedMeeting.current?.id === id ? displayedMeeting.current.revision : 0,
+    );
+
+    function scheduleRefresh(delay = 0) {
+      if (!isCurrent() || refreshing || timer !== undefined || wantedRevision <= knownRevision()) return;
+      // Give events already arriving together a chance to share one GET.
+      timer = setTimeout(() => {
+        timer = undefined;
+        if (isCurrent() && wantedRevision > knownRevision()) void refresh();
+      }, delay);
+    }
+
+    async function refresh() {
+      refreshing = true;
+      let delay = 0;
+      try {
+        const updated = await client.get(id, controller.signal);
+        if (!isCurrent()) return;
+        loadedRevision = Math.max(loadedRevision, updated.revision);
+        setMeeting(current => current?.id === id && updated.revision > current.revision ? updated : current);
+        if (updated.revision < wantedRevision) delay = 250;
+      } catch {
+        // The stream has already accepted these notifications. Keep the target
+        // locally so a transient GET failure does not require another edit.
+        delay = 1500;
+      } finally {
+        refreshing = false;
+        scheduleRefresh(delay);
+      }
+    }
+
+    void client.watch(
       id,
-      async () => {
-        const updated = await client.get(id);
-        if (!controller.signal.aborted && active.current === id)
-          setMeeting((current) =>
-            !current || updated.revision >= current.revision
-              ? updated
-              : current,
-          );
+      ({ revision }) => {
+        if (!Number.isSafeInteger(revision)) return;
+        wantedRevision = Math.max(wantedRevision, revision);
+        scheduleRefresh();
       },
       controller.signal,
       (status) => {
@@ -194,7 +236,10 @@ export default function SavedWorkspace() {
         }
       },
     );
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
   }, [meeting?.id, client, session]);
   useEffect(() => {
     setAnswer(null);

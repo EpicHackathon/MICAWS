@@ -55,7 +55,7 @@ export function createMicawsClient({ baseUrl = "", token, fetchImpl = fetch }: {
         method: "POST",
         body: { id, title, series },
       }),
-    get: (id: string) => request<WorkspaceMeeting>(path(id)),
+    get: (id: string, signal?: AbortSignal) => request<WorkspaceMeeting>(path(id), { signal }),
     issueSession: (meetingId: string | null, role: WorkspaceRole = "viewer") =>
       request<{ token: string; expiresAt: number }>("/api/v1/sessions", {
         method: "POST",

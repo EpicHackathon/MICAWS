@@ -65,6 +65,15 @@ test("saved workspace autosaves corrections and recovers an uncertain response a
   }).meeting;
   let loseResponse = true;
   let attempts = 0;
+  let reads = 0;
+  let eventStream;
+  let eventId = 0;
+  let deferRead;
+  function notify(revision) {
+    eventStream.enqueue(new TextEncoder().encode(
+      `id: ${++eventId}\nevent: revision\ndata: ${JSON.stringify({ revision })}\n\n`,
+    ));
+  }
   const receipts = new Set();
   t.mock.method(globalThis, "fetch", async (url, options = {}) => {
     if (url.endsWith("/config"))
@@ -84,6 +93,7 @@ test("saved workspace autosaves corrections and recovers an uncertain response a
       return new Response(
         new ReadableStream({
           start(controller) {
+            eventStream = controller;
             controller.enqueue(new TextEncoder().encode(": heartbeat\n\n"));
             options.signal.addEventListener(
               "abort",
@@ -106,7 +116,11 @@ test("saved workspace autosaves corrections and recovers an uncertain response a
       }
       return Response.json(m);
     }
-    if (url.endsWith(m.id)) return Response.json(m);
+    if (url.endsWith(m.id)) {
+      reads++;
+      if (deferRead) await deferRead;
+      return Response.json(m);
+    }
     throw new Error(`Unexpected request: ${url}`);
   });
   const vite = await createServer({
@@ -157,6 +171,41 @@ test("saved workspace autosaves corrections and recovers an uncertain response a
   assert.equal(document.querySelector('#help-corrections details').open, true);
   assert.equal(attempts, 0, 'Help navigation does not save or submit forms');
   assert.match(document.body.textContent, /Saved review/);
+  await waitFor(() => eventStream);
+  const initialReads = reads;
+  await act(async () => {
+    notify(m.revision - 1);
+    notify(m.revision);
+    await new Promise(resolve => setTimeout(resolve, 30));
+  });
+  assert.equal(reads, initialReads, "Replay of known revisions needs no meeting reads");
+
+  let releaseRead;
+  deferRead = new Promise(resolve => { releaseRead = resolve; });
+  await act(async () => notify(m.revision + 1));
+  await waitFor(() => reads === initialReads + 1);
+  await act(async () => {
+    notify(m.revision + 2);
+    notify(m.revision + 3);
+    await new Promise(resolve => setTimeout(resolve, 30));
+  });
+  assert.equal(reads, initialReads + 1, "New revisions share the in-flight read");
+  m = { ...m, revision: m.revision + 3, title: "Updated saved review" };
+  await act(async () => {
+    deferRead = undefined;
+    releaseRead();
+    await new Promise(resolve => setTimeout(resolve, 30));
+  });
+  await waitFor(() => document.body.textContent.includes("Updated saved review"));
+  assert.equal(reads, initialReads + 1, "A current response satisfies the whole burst");
+  const beforeNextUpdate = reads;
+  await act(async () => notify(m.revision + 1));
+  await waitFor(() => reads === beforeNextUpdate + 1);
+  m = { ...m, revision: m.revision + 1, title: "Caught up saved review" };
+  await waitFor(() => document.body.textContent.includes("Caught up saved review"));
+  assert.equal(reads, beforeNextUpdate + 2, "An older response leaves one refresh pending");
+
+
   const correction = document.querySelector(".transcript-correction textarea");
   assert.ok(correction);
   await act(async () => {
