@@ -1,3 +1,4 @@
+import { diffMapItems } from "./mapEdits.js";
 import { z } from "zod";
 import { emptyMeetingState, meetingSchema } from "./meetingSchema.js";
 
@@ -216,13 +217,8 @@ export function applyCommand(current: SavedMeeting, raw: unknown) {
       )
         fail(413, "Meeting map limit reached.");
       function compare<T extends { id: string }>(before: T[], after: T[], locks: string[]) {
-        const previous = new Map(before.map((item) => [item.id, item]));
-        const ids = new Set(after.map((item) => item.id));
-        const changed = after.filter((item) => !same(item, previous.get(item.id)));
-        return {
-          locks: [...new Set([...locks, ...changed.map((item) => item.id)])].filter((id) => ids.has(id)),
-          deleted: before.filter((item) => !ids.has(item.id)),
-        };
+        const { currentIds, changedIds, deleted } = diffMapItems(before, after, same);
+        return { locks: [...new Set([...locks, ...changedIds])].filter((id) => currentIds.has(id)), deleted };
       }
       const nodes = compare(next.state.nodes, command.state.nodes, next.lockedIds);
       const tasks = compare(next.state.actionItems, command.state.actionItems, next.lockedTaskIds);

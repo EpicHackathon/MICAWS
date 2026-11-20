@@ -1,3 +1,4 @@
+import { diffMapItems } from '../shared/mapEdits.js';
 import type { MeetingState } from '../shared/meetingSchema.js';
 import type { MeetingRequest } from '../shared/meetingSchema.js';
 type TranscriptSegment = MeetingRequest['newSegments'][number];
@@ -79,15 +80,6 @@ export function selectHistoricalContext(segments: TranscriptSegment[], endIndex:
   return boundedRecent
     .sort((left, right) => left.index - right.index)
     .map(item => item.segment);
-}
-
-// Topics an edit added, renamed, rewrote or moved.
-function changedIds(before: MeetingState, after: MeetingState) {
-  const old = new Map(before.nodes.map(node => [node.id, node]));
-  return after.nodes.filter(node => {
-    const prev = old.get(node.id);
-    return !prev || prev.label !== node.label || prev.summary !== node.summary || prev.parentId !== node.parentId;
-  }).map(node => node.id);
 }
 
 // paused: while someone is editing the map, hold AI map updates. Recording and the transcript
@@ -224,16 +216,13 @@ export function useMeetingProcessor(segments: TranscriptSegment[], isRecording: 
   const applyEdit = useCallback((edit: (state: MeetingState) => MeetingState) => {
     const current = meeting.current;
     const next = edit(current.state);   // throws -> caller shows the message
-    for (const id of changedIds(current.state, next)) current.locked.add(id);
-    for (const node of current.state.nodes) {
-      if (!next.nodes.some(item => item.id === node.id)) current.deletedNodes.set(node.id, { id: node.id, label: node.label, summary: node.summary });
-    }
-    for (const task of current.state.actionItems) {
-      if (!next.actionItems.some(item => item.id === task.id)) current.deletedTaskIds.add(task.id);
-    }
-    for (const task of next.actionItems) {
-      if (current.state.actionItems.find(item => item.id === task.id)?.text !== task.text) current.lockedTaskIds.add(task.id);
-    }
+    const nodes = diffMapItems(current.state.nodes, next.nodes, (a, b) =>
+      a.label === b.label && a.summary === b.summary && a.parentId === b.parentId);
+    const tasks = diffMapItems(current.state.actionItems, next.actionItems, (a, b) => a.text === b.text);
+    for (const id of nodes.changedIds) current.locked.add(id);
+    for (const { id, label, summary } of nodes.deleted) current.deletedNodes.set(id, { id, label, summary });
+    for (const task of tasks.deleted) current.deletedTaskIds.add(task.id);
+    for (const id of tasks.changedIds) current.lockedTaskIds.add(id);
     current.request?.abort();
     current.request = null;
     current.dirty = true;

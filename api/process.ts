@@ -1,5 +1,5 @@
 import type { MeetingState } from "../src/shared/meetingSchema.js";
-import { GoogleGenAI } from '@google/genai';
+import { createLiveFallback, generateGemini } from '../server/gemini.js';
 import { meetingJsonSchema, meetingSchema, requestSchema } from '../src/shared/meetingSchema.js';
 import { getDemoState } from '../src/shared/demo.js';
 import { generateWithOllama } from './ollama.js';
@@ -22,14 +22,8 @@ MATERIALS AND LANGUAGE
 materials contains currently selected supporting documents, with page/slide numbers. Distinguish background context from spoken decisions. Attribute document-derived facts in node summaries with document name and page/slide. Removed materials are no longer evidence; on reassessment remove their unsupported derived content while preserving manual edits and facts independently supported by speech. outputLanguage controls generated map text and tasks, but never rewrite manually locked text. The default is the conversation's language. Historical context is bounded earlier evidence, not new speech.
 `;
 
-async function generate(input: unknown, env: NodeJS.ProcessEnv, model: string) {
-  const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY?.trim(), httpOptions: { timeout: 45_000 } });
-  const result = await ai.models.generateContent({
-    model,
-    contents: JSON.stringify(input),
-    config: { systemInstruction, responseMimeType: 'application/json', responseJsonSchema: meetingJsonSchema },
-  });
-  return result.text;
+function generate(input: unknown, env: NodeJS.ProcessEnv, model: string) {
+  return generateGemini(input, env, model, systemInstruction, meetingJsonSchema);
 }
 
 // What the AI must keep from the previous map. It MAY merge, move or remove topics it made itself
@@ -99,7 +93,7 @@ export function mapCheck(state: MeetingState) {
 const error = (status: number, message: string, headers?: HeadersInit) => Response.json({ error: message }, { status, headers });
 
 export function createHandler({ env = process.env, generateText = generate } = {}) {
-  const exhaustedModels = new Map<string, number>();
+  const fallback = createLiveFallback(env, { snapshotReadyModels: true });
   return async function handle(request: Request) {
     if (request.method !== 'POST') return error(405, 'Use POST.', { Allow: 'POST' });
 
@@ -136,26 +130,16 @@ export function createHandler({ env = process.env, generateText = generate } = {
           return error(503, 'Could not reach Ollama. Start Ollama, download the configured model, and retry; your meeting input is preserved.');
         }
       } else {
-      if (!env.GEMINI_API_KEY?.trim()) return error(503, 'Set GEMINI_API_KEY on the server.');
-      const models = [...new Set([env.GEMINI_MODEL?.trim() || 'gemini-3.5-flash-lite', ...(env.GEMINI_MODELS || '').split(',').map(model => model.trim()).filter(Boolean)])];
-      const now = Date.now();
-      const cooldown = Math.max(1, Number(env.GEMINI_QUOTA_COOLDOWN_MS) || 60_000);
-      let available = models.filter(model => (exhaustedModels.get(model) || 0) <= now);
-      for (const model of available) {
+        if (!env.GEMINI_API_KEY?.trim()) return error(503, 'Set GEMINI_API_KEY on the server.');
         try {
-          output = await generateText(input, env, model);
-          break;
-        } catch (cause) {
-          if (Number((cause as { status?: number } | null)?.status) !== 429) {
-            return error(502, 'Gemini is unavailable or rejected the request. Check your server configuration and retry.');
-          }
-          exhaustedModels.set(model, Date.now() + cooldown);
+          const result = await fallback(model => generateText(input, env, model));
+          output = result.text;
+          if (output === undefined) return error(429, result.ready
+            ? 'All configured Gemini models reached their request quota. Pending meeting input is preserved; retry after the quota cooldown.'
+            : 'All configured Gemini models are temporarily quota limited. Pending meeting input is preserved; retry after the quota cooldown.');
+        } catch {
+          return error(502, 'Gemini is unavailable or rejected the request. Check your server configuration and retry.');
         }
-      }
-      available = models.filter(model => (exhaustedModels.get(model) || 0) <= Date.now());
-      if (output === undefined) return error(429, available.length
-        ? 'All configured Gemini models reached their request quota. Pending meeting input is preserved; retry after the quota cooldown.'
-        : 'All configured Gemini models are temporarily quota limited. Pending meeting input is preserved; retry after the quota cooldown.');
       }
       try {
         candidate = JSON.parse(output);

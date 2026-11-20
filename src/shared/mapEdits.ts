@@ -110,3 +110,17 @@ export function deleteNode(state: MeetingState, id: string) {
   const next = state.nodes.filter(n => !gone.has(n.id));
   return { ...state, nodes: next, edges: rebuildEdges(next), actionItems: next.length ? state.actionItems : [] };
 }
+
+export function diffMapItems<T extends { id: string }>(
+  before: T[],
+  after: T[],
+  unchanged: (previous: T, current: T) => boolean,
+) {
+  const previousById = new Map(before.map(item => [item.id, item]));
+  const currentIds = new Set(after.map(item => item.id));
+  const changedIds = after.filter(item => {
+    const previous = previousById.get(item.id);
+    return !previous || !unchanged(previous, item);
+  }).map(item => item.id);
+  return { currentIds, changedIds, deleted: before.filter(item => !currentIds.has(item.id)) };
+}
