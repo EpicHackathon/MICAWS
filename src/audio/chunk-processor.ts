@@ -8,9 +8,10 @@ class ChunkProcessor extends AudioWorkletProcessor {
   length: number;
   startSample: number;
   stopped: boolean;
-  constructor() {
+  constructor(options?: { processorOptions?: { captionMode?: boolean } }) {
     super();
-    this.buffer = new Float32Array(sampleRate * 10);
+    const seconds = options?.processorOptions?.captionMode ? 1.5 : 10;
+    this.buffer = new Float32Array(Math.round(sampleRate * seconds));
     this.length = 0;
     this.startSample = 0;
     this.stopped = false;

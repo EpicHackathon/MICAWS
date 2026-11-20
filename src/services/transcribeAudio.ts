@@ -1,26 +1,31 @@
+export type WordSpan = { text: string; start: number; end: number };
+
 export type TranscriptionSegment = {
   text: string;
   start: number;
   end: number;
   speaker: string | null;
+  words?: WordSpan[];
 };
 
 type TranscriptionOptions = {
   chunkId?: string;
   startSeconds?: number;
   language?: string;
+  includeWords?: boolean;
 };
 
 export async function transcribeAudio(
   audio: Blob,
   signal?: AbortSignal,
-  { chunkId = crypto.randomUUID(), startSeconds = 0, language = 'auto' }: TranscriptionOptions = {},
+  { chunkId = crypto.randomUUID(), startSeconds = 0, language = 'auto', includeWords = false }: TranscriptionOptions = {},
 ): Promise<TranscriptionSegment[]> {
   const form = new FormData();
   form.append('audio', audio, 'recording.wav');
   form.append('chunk_id', chunkId);
   form.append('start_seconds', String(startSeconds));
   form.append('language', language);
+  if (includeWords) form.append('include_words', 'true');
   const timeout = AbortSignal.timeout(120_000);
   let response;
   try {
@@ -40,6 +45,9 @@ export async function transcribeAudio(
   if (!Array.isArray(result) || !result.every(segment =>
     segment !== null && typeof segment === 'object' && typeof segment.text === 'string' && Number.isFinite(segment.start) && segment.start >= 0
     && Number.isFinite(segment.end) && segment.end >= segment.start
+    && (segment.words === undefined || (Array.isArray(segment.words) && segment.words.every((word: WordSpan) =>
+      word && typeof word.text === 'string' && word.text.trim() && Number.isFinite(word.start)
+      && word.start >= 0 && Number.isFinite(word.end) && word.end > word.start)))
     && (segment.speaker === null || typeof segment.speaker === 'string'))) {
     throw new Error('The transcription server returned an invalid response.');
   }

@@ -6,13 +6,15 @@ import { formatTime } from '../shared/formatTime.js';
 // unless you've scrolled up to reread something (then it leaves you where you are).
 type Props = {
   segments?: TranscriptSegment[];
+  draftCaption?: string;
+  alignedWordCount?: number;
   isRecording?: boolean;
   onSeek?: (seconds: number) => void;
   translations?: string[];
   translationLanguage?: string;
 };
 
-export default function TranscriptPanel({ segments = [], isRecording = false, onSeek, translations = [], translationLanguage }: Props) {
+export default function TranscriptPanel({ segments = [], draftCaption, alignedWordCount = 0, isRecording = false, onSeek, translations = [], translationLanguage }: Props) {
   const scroller = useRef<HTMLDivElement>(null);
   const stickToBottom = useRef(true);
 
@@ -25,20 +27,21 @@ export default function TranscriptPanel({ segments = [], isRecording = false, on
   useEffect(() => {
     const el = scroller.current;
     if (el && stickToBottom.current) el.scrollTop = el.scrollHeight;
-  }, [segments.length]);
+  }, [segments.length, draftCaption]);
 
   return (
     // Labelled "Transcript" only once something has been said (an empty panel isn't a transcript yet).
-    <section className="transcript-panel" aria-label={segments.length ? 'Transcript' : 'Transcript (empty)'}>
+    <section className="transcript-panel" aria-label={segments.length || draftCaption ? 'Transcript' : 'Transcript (empty)'}>
       <header className="transcript-head">
         <h3>Transcript</h3>
         <span className="transcript-count">
           {isRecording && <span className="transcript-live" aria-hidden="true" />}
           {segments.length} line{segments.length === 1 ? '' : 's'}
+          {alignedWordCount > 0 && ` · ${alignedWordCount} aligned words`}
         </span>
       </header>
       <div className="transcript-scroll" ref={scroller} onScroll={handleScroll} tabIndex={0}>
-        {segments.length === 0 ? (
+        {segments.length === 0 && !draftCaption ? (
           <p className="transcript-empty">Nothing said yet. Press Start Recording to begin.</p>
         ) : (
           segments.map((segment, index) => (
@@ -51,6 +54,7 @@ export default function TranscriptPanel({ segments = [], isRecording = false, on
             </p>
           ))
         )}
+        {draftCaption && <p className="transcript-line transcript-draft"><strong>Draft:</strong> {draftCaption}</p>}
       </div>
     </section>
   );

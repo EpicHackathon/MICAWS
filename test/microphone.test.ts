@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import { LiveCaptions } from '../src/audio/liveCaptions.js';
 import { encodeWav } from '../src/audio/encodeWav.js';
 import { MicrophoneSession } from '../src/services/microphoneSession.js';
 
@@ -49,8 +50,103 @@ for (const rate of [44100, 48000]) {
     assert.deepEqual(chunks.map(c => c.startSample), [0, rate * 10, rate * 20]);
     for (const c of chunks) assert.deepEqual(c.samples, original.subarray(c.startSample, c.startSample + c.samples.length));
     assert.equal(processor.process([[new Float32Array(128)]]), false);
+
+    messages.length = 0;
+    const captions = new Processor({ processorOptions: { captionMode: true } });
+    captions.process([[new Float32Array(rate * 2)]]);
+    captions.port.onmessage({ data: 'stop' });
+    assert.deepEqual(messages.map(message => message.samples?.length), [rate * 1.5, rate * 0.5, undefined]);
   });
 }
+
+test('live drafts can be corrected before finalization and overlap is committed once', () => {
+  const captions = new LiveCaptions();
+  const heard = (words) => ({
+    start: words[0].start, end: words.at(-1).end, speaker: null,
+    text: words.map(word => word.text).join(' '), words,
+  });
+  const word = (text, start, end) => ({ text, start, end });
+  const draft = captions.update([heard([word('ice', 0.7, 0.9)])], 1.5);
+  assert.equal(draft.draft, 'ice');
+  assert.deepEqual(draft.final, []);
+  const corrected = [word('I', 0.7, 0.8), word('scream', 0.8, 1.1), word('today', 2.4, 2.8)];
+  const next = captions.update([heard(corrected)], 3);
+  assert.equal(next.final[0].text, 'I scream');
+  assert.deepEqual(next.final[0].words, corrected.slice(0, 2));
+  assert.equal(next.draft, 'today');
+  assert.deepEqual(captions.update([heard(corrected)], 4.5).final.map(s => s.text), ['today']);
+  assert.deepEqual(captions.finish(), []);
+});
+
+test('caption recording sends overlapping audio, keeps recording input disjoint, and finalizes the tail', async t => {
+  const calls = [], drafts = [], archive = [];
+  t.mock.method(globalThis, 'fetch', async (_, { body }) => {
+    const bytes = await body.get('audio').arrayBuffer();
+    calls.push([body.get('start_seconds'), body.get('include_words'), (bytes.byteLength - 44) / 2]);
+    return Response.json([{ start: 10.5, end: 11, speaker: null, text: 'Hello' }]);
+  });
+  const { recorder, transcripts, statuses } = session({
+    startSeconds: 10,
+    onDraftCaption: text => drafts.push(text),
+    onAudioChunk: (samples, _rate, start) => archive.push([samples.length, start]),
+  });
+  recorder.receive(chunk(0, 24_000));
+  await tick();
+  assert.equal(drafts.at(-1), 'Hello');
+  assert.equal(transcripts.flatMap(([segments]) => segments).length, 0);
+  recorder.receive(chunk(24_000, 4000));
+  recorder.receive({ type: 'stopped' });
+  await tick();
+  await tick();
+  assert.deepEqual(calls, [['10', 'true', 24_000], ['10', 'true', 28_000]]);
+  assert.deepEqual(archive, [[24_000, 10], [4000, 11.5]]);
+  const final = transcripts.flatMap(([segments]) => segments);
+  assert.equal(final.length, 1);
+  assert.equal(final[0].text, 'Hello');
+  assert.deepEqual(final[0].words, [], 'Estimated timings are not clip spans');
+  assert.equal(drafts.at(-1), '');
+  assert.deepEqual(statuses, ['idle']);
+});
+
+test('caption backlog requests stop and drains the captured work', async t => {
+  let release, requests = 0;
+  t.mock.method(globalThis, 'fetch', async () => {
+    if (++requests === 1) await new Promise(resolve => { release = resolve; });
+    return Response.json([]);
+  });
+  const { recorder, errors, statuses } = session({ onDraftCaption() {} });
+  const commands = [];
+  recorder.node = { port: { postMessage: command => commands.push(command), close() {} }, disconnect() {} };
+  for (let index = 0; index < 6; index++) recorder.receive(chunk(index * 24_000, 24_000));
+  assert.deepEqual(commands, ['stop']);
+  assert.match(errors[0], /falling behind/);
+  assert.equal(requests, 1, 'Only one recognition request runs at once');
+  recorder.receive({ type: 'stopped' });
+  release();
+  await tick();
+  assert.equal(requests, 6);
+  assert.equal(recorder.queue.length, 0);
+  assert.deepEqual(statuses, ['transcribing', 'idle']);
+});
+
+test('cancelling caption capture aborts queued recognition and ignores late results', async t => {
+  let resolve, signal;
+  t.mock.method(globalThis, 'fetch', async (_, options) => {
+    signal = options.signal;
+    return new Promise(done => { resolve = done; });
+  });
+  const drafts = [];
+  const { recorder, transcripts } = session({ onDraftCaption: text => drafts.push(text) });
+  recorder.receive(chunk(0, 24_000));
+  recorder.receive(chunk(24_000, 24_000));
+  recorder.cancel();
+  resolve(Response.json([segment(0)]));
+  await tick();
+  assert.equal(signal.aborted, true);
+  assert.deepEqual(drafts, []);
+  assert.deepEqual(transcripts, []);
+  assert.equal(recorder.queue.length, 0);
+});
 
 test('every WAV has an independent header, correct rate and clipped PCM samples', async () => {
   const wav = encodeWav(new Float32Array([-2, -1, 0, 1, 2]), 48000);

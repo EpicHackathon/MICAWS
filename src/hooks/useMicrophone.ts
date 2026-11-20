@@ -1,11 +1,13 @@
-import type { TranscriptionSegment } from '../services/transcribeAudio.js';
+import type { TranscriptionSegment, WordSpan } from '../services/transcribeAudio.js';
 import type { MicrophoneStatus } from '../services/microphoneSession.js';
 import { useEffect, useRef, useState } from 'react';
 import { MicrophoneSession } from '../services/microphoneSession.js';
 import { RecordingArchive } from '../audio/recordingArchive.js';
 
-export function useMicrophone(onTranscript: (segments: TranscriptionSegment[], endSeconds: number) => void, { language = 'auto', workletUrl }: { language?: string; workletUrl: string }) {
+export function useMicrophone(onTranscript: (segments: TranscriptionSegment[], endSeconds: number) => void, { language = 'auto', workletUrl, captionMode = false }: { language?: string; workletUrl: string; captionMode?: boolean }) {
   const [status, setStatus] = useState<MicrophoneStatus>('idle');
+  const [draftCaption, setDraftCaption] = useState('');
+  const [wordSpans, setWordSpans] = useState<WordSpan[]>([]);
   const [error, setError] = useState<string | null>(null);
   const active = useRef<MicrophoneSession | null>(null);
   const archive = useRef(new RecordingArchive());
@@ -46,6 +48,9 @@ export function useMicrophone(onTranscript: (segments: TranscriptionSegment[], e
     setError(null);
     const session = new MicrophoneSession({
       workletUrl,
+      onDraftCaption: captionMode ? text => {
+        if (active.current === session) setDraftCaption(text);
+      } : undefined,
       startSeconds: Math.max(startSeconds, archive.current.duration), language,
       onAudioChunk: (samples, sampleRate, start) => {
         if (active.current !== session) return false;
@@ -64,7 +69,10 @@ export function useMicrophone(onTranscript: (segments: TranscriptionSegment[], e
       },
       onCaptureDone: () => { if (active.current === session) publishRecording(); },
       onTranscript: (transcript, endSeconds) => {
-        if (active.current === session) callback.current(transcript, endSeconds);
+        if (active.current !== session) return;
+        const aligned = transcript.flatMap(segment => segment.words ?? []);
+        if (aligned.length) setWordSpans(current => [...current, ...aligned]);
+        callback.current(transcript, endSeconds);
       },
       onStatus: nextStatus => {
         if (active.current !== session) return;
@@ -86,13 +94,15 @@ export function useMicrophone(onTranscript: (segments: TranscriptionSegment[], e
     archive.current = new RecordingArchive();
     setRecording(null);
     setRecordingEnd(0);
+    setDraftCaption('');
+    setWordSpans([]);
     setStatus('idle');
     setError(null);
   }
 
   return {
     start, stop: () => active.current?.stop(), retry: () => active.current?.retry(),
-    reset, status, error, recording, recordingEnd, hasRecording: recordingEnd > 0, audioRef,
+    reset, status, error, draftCaption, wordSpans, recording, recordingEnd, hasRecording: recordingEnd > 0, audioRef,
     seek: (time: number) => {
       if (!recording || !audioRef.current || time < 0 || time > recording.duration) return;
       audioRef.current.currentTime = time;

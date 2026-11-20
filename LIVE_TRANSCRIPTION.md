@@ -83,3 +83,31 @@ The default backend address is http://127.0.0.1:8000. Set TRANSCRIPTION_URL in .
 For Docker, run `docker compose up --build frontend transcription`. The transcription container has its own Python environment and model cache. Watch its startup logs before recording. The diart import-check container is separate from WhisperX.
 
 If the backend is unavailable or still loading, the frontend returns an explicit 503 error. If model loading fails, inspect Terminal 1 for the underlying dependency, FFmpeg, network, or model-download error. After recovery, use **Process pending / retry** to resend retained chunks. Reset or refresh discards retained audio.
+
+
+## Compare the experimental caption mode
+
+1. Start WhisperX and Vite normally. In the live workspace, select the spoken language
+   explicitly and record the same short clip with each **Transcription mode**.
+2. Measure from the first spoken word to the first visible text, and again until
+   those words appear on a finalized transcript line. Repeat after the model warms up.
+3. Try a few minutes of continuous speech. Look for delayed captions, repeated words,
+   dropped words, and the falling-behind message. Stop and confirm the last phrase
+   appears and plays from the correct time in the recording.
+4. Start another recording and reset it while audio is processing. Check that
+   a late response cannot bring back draft or final text.
+
+The experimental mode finalizes older audio as windows advance and flushes the
+last draft after queued audio finishes. It stops capture if six requests queue up,
+then drains those requests. Repeated words and short utterances are useful
+comparison cases because overlapping-window reconciliation uses a timing heuristic.
+Standard mode remains the default.
+
+To try aligned word spans, restart the Python service with
+`WHISPERX_CAPTION_ALIGNMENT=true` in its environment. This can download a language
+alignment model and add processing time. Finalized words with validated alignment
+are retained on the recording timeline in memory for future clipping, and their
+count appears above the transcript. The default caption mode estimates word
+positions from segment timing for overlap reconciliation and does not expose
+those estimates as clip spans. Languages without whitespace-delimited words can
+appear in larger units when alignment is unavailable.

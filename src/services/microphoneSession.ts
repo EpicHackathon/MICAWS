@@ -1,12 +1,14 @@
+import { CAPTION_OVERLAP_SECONDS, LiveCaptions } from '../audio/liveCaptions.js';
 import type { TranscriptionSegment } from './transcribeAudio.js';
 export type MicrophoneStatus = 'idle' | 'starting' | 'recording' | 'transcribing';
-type AudioQueueItem = { audio: Blob; chunkId: string; startSeconds: number; endSeconds: number; language: string };
+type AudioQueueItem = { audio: Blob; chunkId: string; startSeconds: number; endSeconds: number; language: string; includeWords?: boolean };
 type WorkletMessage = { type: 'stopped' } | { type: 'chunk'; samples: Float32Array; sampleRate: number; startSample: number };
 type MicrophoneSessionOptions = {
   onTranscript: (segments: TranscriptionSegment[], endSeconds: number) => void;
   onStatus: (status: MicrophoneStatus) => void;
   onError: (message: string | null) => void;
   onAudioChunk?: (samples: Float32Array, rate: number, start: number) => boolean | void;
+  onDraftCaption?: (text: string) => void;
   onCaptureDone?: () => void; workletUrl: string; language?: string; startSeconds?: number; retryDelays?: number[];
 };
 import { encodeWav } from '../audio/encodeWav.js';
@@ -22,13 +24,17 @@ export class MicrophoneSession {
   onError: (message: string | null) => void;
   onAudioChunk?: (samples: Float32Array, rate: number, start: number) => boolean | void;
   onCaptureDone?: () => void;
+  private readonly captions?: LiveCaptions;
+  private readonly onDraftCaption?: (text: string) => void;
+  private overlap = new Float32Array(0);
+  private capturedEnd: number;
   workletUrl: string;
   language: string; startSeconds: number; id: string; controller: AbortController;
   queue: AudioQueueItem[]; cancelled: boolean; stopping: boolean; captureDone: boolean;
   processing: boolean; failed: boolean;
   context?: AudioContext; stream?: MediaStream; source?: MediaStreamAudioSourceNode; node?: AudioWorkletNode;
   retryTimer?: ReturnType<typeof setTimeout>; stopTimer?: ReturnType<typeof setTimeout>;
-  constructor({ onTranscript, onStatus, onError, onAudioChunk, onCaptureDone, workletUrl, language = 'auto', startSeconds = 0, retryDelays = RETRY_DELAYS_MS }: MicrophoneSessionOptions) {
+  constructor({ onTranscript, onStatus, onError, onAudioChunk, onCaptureDone, onDraftCaption, workletUrl, language = 'auto', startSeconds = 0, retryDelays = RETRY_DELAYS_MS }: MicrophoneSessionOptions) {
     this.retryDelays = retryDelays;
     this.failures = 0;   // failures in a row (resets after a chunk works)
     this.onTranscript = onTranscript;
@@ -37,6 +43,9 @@ export class MicrophoneSession {
     this.onAudioChunk = onAudioChunk;
     this.onCaptureDone = onCaptureDone;
     this.workletUrl = workletUrl;
+    this.onDraftCaption = onDraftCaption;
+    this.captions = onDraftCaption ? new LiveCaptions() : undefined;
+    this.capturedEnd = startSeconds;
     this.language = language;
     this.startSeconds = startSeconds;
     this.id = crypto.randomUUID();
@@ -67,6 +76,7 @@ export class MicrophoneSession {
       this.source = this.context.createMediaStreamSource(this.stream);
       this.node = new AudioWorkletNode(this.context, 'microphone-chunks', {
         channelCount: 1, channelCountMode: 'explicit', outputChannelCount: [1],
+        processorOptions: { captionMode: !!this.captions },
       });
       this.node.port.onmessage = ({ data }) => this.receive(data);
       this.node.onprocessorerror = () => {
@@ -105,16 +115,28 @@ export class MicrophoneSession {
       this.release();
     } else if (data.type === 'chunk') {
       const startSeconds = this.startSeconds + data.startSample / data.sampleRate;
+      const endSeconds = startSeconds + data.samples.length / data.sampleRate;
+      this.capturedEnd = endSeconds;
+      let windowStart = startSeconds;
+      let samples = data.samples;
+      if (this.captions) {
+        windowStart -= this.overlap.length / data.sampleRate;
+        samples = new Float32Array(this.overlap.length + data.samples.length);
+        samples.set(this.overlap);
+        samples.set(data.samples, this.overlap.length);
+        this.overlap = samples.slice(-Math.round(data.sampleRate * CAPTION_OVERLAP_SECONDS));
+      }
       this.queue.push({
-        audio: encodeWav(data.samples, data.sampleRate),
+        audio: encodeWav(samples, data.sampleRate),
         chunkId: `${this.id}-${data.startSample}`,
-        startSeconds,
-        endSeconds: startSeconds + data.samples.length / data.sampleRate,
+        startSeconds: Math.max(this.startSeconds, windowStart),
+        endSeconds,
         language: this.language,
+        includeWords: !!this.captions,
       });
       if (this.onAudioChunk?.(data.samples, data.sampleRate, startSeconds) === false) this.stop();
       // Bound memory if inference cannot keep up with capture.
-      if (this.queue.length >= 12 && !this.stopping) {
+      if (this.queue.length >= (this.captions ? 6 : 12) && !this.stopping) {
         this.onError('Transcription is falling behind. Recording stopped so the remaining audio can finish processing.');
         this.stop();
       }
@@ -132,7 +154,13 @@ export class MicrophoneSession {
         if (this.cancelled) return;
         this.queue.shift();
         this.failures = 0;
-        this.onTranscript(transcript, chunk.endSeconds);
+        if (this.captions) {
+          const { final, draft } = this.captions.update(transcript, chunk.endSeconds);
+          this.onTranscript(final, chunk.endSeconds);
+          this.onDraftCaption?.(draft);
+        } else {
+          this.onTranscript(transcript, chunk.endSeconds);
+        }
       }
     } catch (cause) {
       if (!this.cancelled) {
@@ -147,6 +175,12 @@ export class MicrophoneSession {
     } finally {
       this.processing = false;
       if (!this.cancelled && !this.failed && this.captureDone && !this.queue.length) {
+        if (this.captions) {
+          const final = this.captions.finish();
+          if (final.length) this.onTranscript(final, this.capturedEnd);
+          this.onDraftCaption?.('');
+          this.overlap = new Float32Array(0);
+        }
         this.onStatus('idle');
       }
     }
@@ -193,6 +227,7 @@ export class MicrophoneSession {
     clearTimeout(this.retryTimer);
     this.controller.abort();
     this.queue = [];
+    this.overlap = new Float32Array(0);
     this.release();
   }
 }

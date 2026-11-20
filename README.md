@@ -63,6 +63,15 @@ python -m uvicorn transcription.main:app --host 127.0.0.1 --port 8000
 
 Wait for **Application startup complete**, then allow microphone access in the live workspace. The first startup may download model files. The browser sends ten-second audio chunks to WhisperX and adds the returned speech segments to the transcript. [Live transcription guide and Windows setup](LIVE_TRANSCRIPTION.md)
 
+### Try experimental live captions
+
+Choose **Live captions (experimental)** in **Transcription mode** before recording.
+Standard mode sends 10-second chunks. The experiment sends new audio every 1.5 seconds,
+with up to 3 seconds of preceding context. Draft captions may change while WhisperX
+works. Finalized lines feed the mind map and summary. See the
+[live transcription guide](LIVE_TRANSCRIPTION.md#compare-the-experimental-caption-mode)
+for a comparison checklist and optional word alignment.
+
 ## Project structure
 
 | Directory | What lives there |

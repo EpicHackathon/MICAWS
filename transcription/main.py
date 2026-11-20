@@ -1,5 +1,6 @@
 import logging
 import math
+import os
 import shutil
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -16,7 +17,7 @@ logger = logging.getLogger("uvicorn.error")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Loading WhisperX; the first startup downloads model files. Wait for Application startup complete before recording.")
-    app.state.transcriber = Transcriber()
+    app.state.transcriber = Transcriber(align_words=os.getenv("WHISPERX_CAPTION_ALIGNMENT") == "true")
     try:
         yield
     finally:
@@ -38,6 +39,7 @@ def transcribe_audio(
     chunk_id: Annotated[str, Form()],
     start_seconds: Annotated[float, Form()] = 0.0,
     language: Annotated[str, Form()] = "auto",
+    include_words: Annotated[bool, Form()] = False,
 ) -> list[dict]:
     if not chunk_id.strip() or not math.isfinite(start_seconds) or start_seconds < 0:
         raise HTTPException(400, "Provide a chunk ID and a finite, nonnegative start time.")
@@ -50,7 +52,9 @@ def transcribe_audio(
                 shutil.copyfileobj(audio.file, destination)
             if not path.stat().st_size:
                 raise HTTPException(400, "The recording is empty.")
-            return request.app.state.transcriber.transcribe_chunk(path, chunk_id, start_seconds, language=language)
+            return request.app.state.transcriber.transcribe_chunk(
+                path, chunk_id, start_seconds, language=language, include_words=include_words,
+            )
     except HTTPException:
         raise
     except Exception as error:

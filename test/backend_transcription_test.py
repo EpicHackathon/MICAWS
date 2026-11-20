@@ -34,5 +34,26 @@ class LanguageTests(unittest.TestCase):
                 transcriber.transcribe_chunk(audio.name, "chunk", language="invalid")
 
 
+    def test_caption_alignment_uses_absolute_recording_offsets_and_skips_invalid_spans(self):
+        fake_whisper.load_audio = Mock(return_value=types.SimpleNamespace(size=16000))
+        model = Mock()
+        original = {"text": "Hello there", "start": 0.2, "end": 0.9}
+        model.transcribe.return_value = {"segments": [original], "language": "en"}
+        fake_whisper.load_model = Mock(return_value=model)
+        fake_whisper.load_align_model = Mock(return_value=(object(), {}))
+        fake_whisper.align = Mock(return_value={"segments": [{**original, "words": [
+            {"word": "Hello", "start": 0.2, "end": 0.5},
+            {"word": "there"},
+        ]}]})
+        with patch.object(module.shutil, "which", return_value="ffmpeg"), tempfile.NamedTemporaryFile() as audio:
+            transcriber = module.Transcriber(align_words=True)
+            self.assertNotIn("words", transcriber.transcribe_chunk(audio.name, "standard")[0])
+            fake_whisper.align.assert_not_called()
+            for offset in (5, 8):
+                result = transcriber.transcribe_chunk(audio.name, "caption", offset, include_words=True)
+                self.assertEqual(result[0]["words"], [{"text": "Hello", "start": offset + 0.2, "end": offset + 0.5}])
+            fake_whisper.load_align_model.assert_called_once_with(language_code="en", device="cpu")
+
+
 if __name__ == "__main__":
     unittest.main()

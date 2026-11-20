@@ -1,3 +1,4 @@
+import logging
 import math
 import shutil
 from pathlib import Path
@@ -7,8 +8,11 @@ import whisperx
 from whisperx.utils import LANGUAGES
 
 
+logger = logging.getLogger(__name__)
+
+
 class Transcriber:
-    def __init__(self, model_name: str = "base", language: str = "auto"):
+    def __init__(self, model_name: str = "base", language: str = "auto", *, align_words: bool = False):
         if shutil.which("ffmpeg") is None:
             raise RuntimeError(
                 "FFmpeg is required. Windows: winget install --id Gyan.FFmpeg --exact; macOS: brew install ffmpeg"
@@ -16,6 +20,9 @@ class Transcriber:
 
         self.language = language
         self._lock = Lock()
+        self._align_words = align_words
+        self._alignment = None
+        self._unsupported_alignment = set()
         self._model = whisperx.load_model(
             model_name,
             device="cpu",
@@ -30,6 +37,7 @@ class Transcriber:
         chunk_id: str,
         start_seconds: float = 0.0,
         language: str | None = None,
+        *, include_words: bool = False,
     ) -> list[dict]:
         path = Path(audio_path).expanduser()
 
@@ -64,6 +72,10 @@ class Transcriber:
                 task="transcribe",
             )
 
+            if include_words and self._align_words and result["segments"]:
+                alignment_language = result.get("language") if language == "auto" else language
+                result = self._align(result, audio, alignment_language)
+
         segments = []
 
         for index, segment in enumerate(result["segments"]):
@@ -72,17 +84,49 @@ class Transcriber:
             if not text:
                 continue
 
-            segments.append(
-                {
-                    "id": f"{chunk_id}-{index}",
-                    "start": round(start_seconds + float(segment["start"]), 3),
-                    "end": round(start_seconds + float(segment["end"]), 3),
-                    "speaker": None,
-                    "text": text,
-                }
-            )
+            entry = {
+                "id": f"{chunk_id}-{index}",
+                "start": round(start_seconds + float(segment["start"]), 3),
+                "end": round(start_seconds + float(segment["end"]), 3),
+                "speaker": None,
+                "text": text,
+            }
+            if include_words and segment.get("words"):
+                words = []
+                for word in segment["words"]:
+                    start, end = word.get("start"), word.get("end")
+                    if (isinstance(start, (float, int)) and isinstance(end, (float, int))
+                            and math.isfinite(start) and math.isfinite(end) and 0 <= start < end):
+                        start = round(start_seconds + start, 3)
+                        end = round(start_seconds + end, 3)
+                        if end > start and word.get("word", "").strip():
+                            words.append({"text": word["word"].strip(), "start": start, "end": end})
+                if words:
+                    entry["words"] = words
+            segments.append(entry)
 
         return segments
+
+    def _align(self, result, audio, language):
+        if not language or language in self._unsupported_alignment:
+            return result
+        try:
+            if self._alignment is None or self._alignment[0] != language:
+                model, metadata = whisperx.load_align_model(language_code=language, device="cpu")
+                self._alignment = (language, model, metadata)
+            _, model, metadata = self._alignment
+        except Exception:
+            self._unsupported_alignment.add(language)
+            logger.warning("WhisperX word alignment model unavailable for %s. Using segment timings.", language)
+            return result
+        try:
+            aligned = whisperx.align(result["segments"], model, metadata, audio, "cpu")
+            return aligned if aligned.get("segments") else result
+        except Exception:
+            logger.warning("WhisperX could not align this window. Using segment timings.")
+            return result
+
+
 if __name__ == "__main__":
     import argparse
     import json

@@ -17,6 +17,8 @@ import { useTranslations } from './hooks/useTranslations.js';
 
 type ResultsProps = {
   segments: TranscriptSegment[];
+  draftCaption?: string;
+  alignedWordCount?: number;
   isRecording: boolean;
   clearTranscript: () => boolean;
   onManualSegment?: (segment: TranscriptSegment) => void;
@@ -36,7 +38,7 @@ const languages = ['English', 'Spanish', 'French', 'German', 'Portuguese', 'Chin
  * MeetingResults component displays the derived state (Nodes, Edges, Actions) 
  * and controls for processing segments. It is now purely a display layer.
  */
-export function MeetingResults({ segments, isRecording, clearTranscript, onManualSegment, captureBusy, devMode = false, children, onSeek, translations, translationLanguage, transcriptTools, recordingPlayer }: ResultsProps) {
+export function MeetingResults({ segments, draftCaption, alignedWordCount, isRecording, clearTranscript, onManualSegment, captureBusy, devMode = false, children, onSeek, translations, translationLanguage, transcriptTools, recordingPlayer }: ResultsProps) {
   // The hook handles state updates based on incoming segments
   const [viewVersion, setViewVersion] = useState(0);
   // True while someone edits the live mind map: AI map updates wait, recording continues.
@@ -75,6 +77,8 @@ export function MeetingResults({ segments, isRecording, clearTranscript, onManua
         onEditingChange={setEditingMap}
         pendingCount={processor.pendingCount}
         segments={segments}
+        draftCaption={draftCaption}
+        alignedWordCount={alignedWordCount}
         isRecording={isRecording}
         devMode={devMode}
         summary={meetingSummary.summary}
@@ -98,6 +102,7 @@ export default function App() {
   // State for the live streaming session
   const [segments, setSegments] = useState<TranscriptSegment[]>([]);
   const [sampleBatch, setSampleBatch] = useState(0);
+  const [captionMode, setCaptionMode] = useState(false);
   const [sourceLanguage, setSourceLanguage] = useState('auto');
   const [translationLanguage, setTranslationLanguage] = useState('');
   const translation = useTranslations(segments, translationLanguage);
@@ -117,7 +122,7 @@ export default function App() {
       speaker: segment.speaker,
       text: segment.text,
     }))]);
-  }, { language: sourceLanguage, workletUrl });
+  }, { language: sourceLanguage, workletUrl, captionMode });
   const isRecording = microphone.status === 'recording';
   const busy = microphone.status !== 'idle';
   const startRecording = () => microphone.start(Math.max(nextStart.current, segments.at(-1)?.time ?? 0));
@@ -179,6 +184,10 @@ export default function App() {
         <label>Speech language <select disabled={busy} value={sourceLanguage} onChange={event => setSourceLanguage(event.target.value)}>
           {Object.entries({ auto: 'Detect automatically', en: 'English', es: 'Spanish', fr: 'French', de: 'German', pt: 'Portuguese', zh: 'Chinese', ja: 'Japanese', ko: 'Korean', hi: 'Hindi', ar: 'Arabic' }).map(([code, label]) => <option key={code} value={code}>{label}</option>)}
         </select></label>
+        <label>Transcription mode <select disabled={busy} value={captionMode ? 'live' : 'standard'} onChange={event => setCaptionMode(event.target.value === 'live')}>
+          <option value="standard">Standard (10-second chunks)</option>
+          <option value="live">Live captions (experimental)</option>
+        </select></label>
         <button className="btn-primary" onClick={startRecording} disabled={busy}>
           <MicIcon />Start Recording
         </button>
@@ -194,7 +203,9 @@ export default function App() {
 
       {/* The results component now consumes the recording state */}
       <MeetingResults 
-        segments={segments} 
+        segments={segments}
+        draftCaption={microphone.draftCaption}
+        alignedWordCount={microphone.wordSpans.length}
         isRecording={isRecording} 
         clearTranscript={clearSession}
         captureBusy={busy}

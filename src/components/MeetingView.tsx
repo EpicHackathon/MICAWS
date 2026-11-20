@@ -26,6 +26,8 @@ type Props = {
   onEditingChange?: (editing: boolean) => void;
   pendingCount?: number;
   segments?: TranscriptSegment[];
+  draftCaption?: string;
+  alignedWordCount?: number;
   isRecording?: boolean;
   devMode?: boolean;
   summary?: SummaryState;
@@ -42,7 +44,7 @@ type Props = {
 
 export default function MeetingView({
   state: liveState, onEdit: onLiveEdit, onEditingChange, pendingCount = 0,
-  segments = [], isRecording = false, devMode = false, summary = { status: 'idle', data: null, error: null },
+  segments = [], draftCaption, alignedWordCount, isRecording = false, devMode = false, summary = { status: 'idle', data: null, error: null },
   onSeek, translations, translationLanguage, onRegenerateSummary,
   mapTools, transcriptTools, hideSummary = false, onSelectNode, taskEvidence,
 }: Props) {
@@ -143,7 +145,7 @@ export default function MeetingView({
             {transcriptHidden ? 'Show transcript' : 'Hide transcript'}
           </button>
           {!transcriptHidden && <div className="transcript-tools">{transcriptTools}</div>}
-          {!transcriptHidden && <TranscriptPanel segments={segments} isRecording={isRecording} onSeek={onSeek} translations={translations} translationLanguage={translationLanguage} />}
+          {!transcriptHidden && <TranscriptPanel segments={segments} draftCaption={draftCaption} alignedWordCount={alignedWordCount} isRecording={isRecording} onSeek={onSeek} translations={translations} translationLanguage={translationLanguage} />}
         </aside>
       </div>
       <MeetingOutline state={state} onEdit={onEdit}/>
